@@ -1,4 +1,4 @@
-import { differenceInDays, endOfMonth, startOfMonth, isAfter, isBefore, parseISO } from 'date-fns'
+import { differenceInDays, endOfMonth, startOfMonth, startOfDay, endOfDay } from 'date-fns'
 
 /**
  * Tính toán số tiền an toàn để chi tiêu trong ngày hôm nay.
@@ -8,12 +8,14 @@ export function calculateDailySafeSpend(
   remainingBudget: number,
   currentDate: Date = new Date()
 ): number {
-  const endOfCurrMonth = endOfMonth(currentDate)
-  // Cộng thêm 1 để tính cả ngày hôm nay
-  const remainingDays = differenceInDays(endOfCurrMonth, currentDate) + 1
+  const normalizedDate = startOfDay(currentDate)
+  const endOfCurrMonth = endOfDay(endOfMonth(normalizedDate))
+  
+  // differenceInDays trả về số ngày trọn vẹn
+  const remainingDays = differenceInDays(endOfCurrMonth, normalizedDate) + 1
   
   if (remainingDays <= 0) return remainingBudget
-  return Math.max(0, remainingBudget / remainingDays)
+  return remainingBudget / remainingDays
 }
 
 /**
@@ -23,8 +25,10 @@ export function calculateBurnRate(
   totalSpent: number,
   currentDate: Date = new Date()
 ): number {
-  const startOfCurrMonth = startOfMonth(currentDate)
-  const daysPassed = differenceInDays(currentDate, startOfCurrMonth) + 1
+  const normalizedDate = startOfDay(currentDate)
+  const startOfCurrMonth = startOfDay(startOfMonth(normalizedDate))
+  
+  const daysPassed = differenceInDays(normalizedDate, startOfCurrMonth) + 1
   
   if (daysPassed <= 0) return 0
   return totalSpent / daysPassed
