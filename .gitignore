@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# TieuGon specific
+playwright-report/
+test-results/
+Quan Ly Chi Tieu _standalone_.html
+.gemini/
