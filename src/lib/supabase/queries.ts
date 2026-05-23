@@ -53,6 +53,10 @@ export async function addTransaction(transaction: {
     .from('transactions')
     .insert([transaction])
     .select();
+  
+  if (error) {
+    console.error('Add transaction failed:', error);
+  }
   return { data, error };
 }
 
