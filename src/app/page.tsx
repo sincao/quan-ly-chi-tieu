@@ -78,7 +78,7 @@ export default function Home() {
 
   if (route === null) return <div style={{ height: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>Loading...</div>;
 
-  if (route === 'login') return <LoginScreen onLogin={() => setRoute('dashboard')} />;
+  if (route === 'login') return <LoginScreen onLogin={() => setRefreshKey(prev => prev + 1)} />;
   if (route === 'onboarding') return user ? <Onboarding userId={user.id} onComplete={() => setRoute('dashboard')} /> : null;
 
   const renderContent = () => {

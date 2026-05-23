@@ -89,9 +89,11 @@ export function calculateStreak(transactions: { date: string }[]): number {
   const yesterday = today - 86400000;
 
   // Nếu ngày gần nhất cũ hơn ngày hôm qua, streak là 0
+  // Tuy nhiên, nếu user mới đăng ký và có giao dịch hôm nay, vẫn tính là 1
   if (dates[0] < yesterday) return 0;
 
   let streak = 1;
+  if (dates.length === 1) return 1; // Ngay ngày đầu tiên có giao dịch là streak 1
   let currentCheck = dates[0];
 
   for (let i = 1; i < dates.length; i++) {

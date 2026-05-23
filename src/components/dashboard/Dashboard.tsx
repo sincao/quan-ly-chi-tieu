@@ -6,6 +6,7 @@ import { getDashboardData } from '@/lib/supabase/queries';
 import { User } from '@supabase/supabase-js';
 import { calculateStreak } from '@/lib/finance/calculations';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { isSameMonth, parseISO, startOfMonth } from 'date-fns';
 
 interface DashboardProps {
   user: User;
@@ -22,14 +23,18 @@ const Kpi: React.FC<any> = ({ primary, label, value, unit, delta, deltaDir, meta
         <span>{label}</span>
       </div>
       {onAction && (
-        <button onClick={(e) => { e.stopPropagation(); onAction(); }} className="hover:bg-white/20 transition-all" style={{ opacity: 0.8, padding: '4px', cursor: 'pointer', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }}>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onAction(); }} 
+          className="hover:bg-white/20 transition-all" 
+          style={{ opacity: 1, padding: '4px', cursor: 'pointer', borderRadius: '4px', background: 'rgba(255,255,255,0.2)' }}
+        >
           <Icon name="edit" size={12} />
         </button>
       )}
     </div>
     <div className="kpi-value">{value}{unit && <span className="unit">{unit}</span>}</div>
     <div className="kpi-meta">{delta && <span className={`kpi-delta ${deltaDir || ''}`}>{delta}</span>}{meta && <span>{meta}</span>}</div>
-    {bar !== undefined && <div className="kpi-bar"><i style={{ width: `${bar}%` }}></i></div>}
+    {bar !== undefined && <div className="kpi-bar"><i style={{ width: `${Math.min(100, Math.max(0, bar))}%` }}></i></div>}
   </div>
 );
 
@@ -54,16 +59,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
   const budgetLimit = data.budget?.amount_limit || 0;
   const allTransactions = data.transactions || [];
   
+  // Bug 3 Fix: Use robust month comparison
+  const now = new Date();
   const currentMonthTransactions = allTransactions.filter((t: any) => {
-    const d = new Date(t.date);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    return isSameMonth(parseISO(t.date), now);
   });
 
   const filteredStatsTransactions = allTransactions.filter((t: any) => {
-    const d = new Date(t.date);
-    const now = new Date();
-    if (statsPeriod === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    const d = parseISO(t.date);
+    if (statsPeriod === 'month') return isSameMonth(d, now);
     if (statsPeriod === '3months') {
       const limit = new Date();
       limit.setMonth(now.getMonth() - 3);
@@ -76,10 +80,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
   const totalIncomeKPI = currentMonthTransactions.filter((t: any) => t.type === 'income').reduce((sum: number, t: any) => sum + Number(t.amount), 0);
   const totalSpentStats = filteredStatsTransactions.filter((t: any) => t.type === 'expense').reduce((sum: number, t: any) => sum + Number(t.amount), 0);
 
-  const remainingBudget = Math.max(0, budgetLimit - totalSpentKPI);
-  const savedValue = Math.max(0, totalIncomeKPI - totalSpentKPI);
+  // Bug 4 Fix: Allow negative budget
+  const remainingBudget = budgetLimit - totalSpentKPI;
+  const savedValue = totalIncomeKPI - totalSpentKPI; // Allowing negative here too if they spent more than earned
   const pctSpent = budgetLimit > 0 ? Math.round((totalSpentKPI / budgetLimit) * 100) : 0;
   const daysLeft = 30 - new Date().getDate();
+  
   const currentStreak = calculateStreak(allTransactions);
   const survivalScore = data.profile?.survival_score || 0;
 
@@ -89,7 +95,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
   }).filter((c: any) => c.amount > 0) || [];
 
   const getDailyData = () => {
-    const now = new Date();
     const result: any[] = [];
     const categories = data.allCategories?.filter((c: any) => c.type === 'expense') || [];
     const days = locale === 'vi' ? ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -97,10 +102,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
     if (dailyPeriod === 'week') {
       const curr = new Date();
       const first = curr.getDate() - curr.getDay() + (curr.getDay() === 0 ? -6 : 1);
-      const startOfWeek = new Date(curr.setDate(first));
-      startOfWeek.setHours(0,0,0,0);
+      const startOfWeekDate = new Date(curr.setDate(first));
+      startOfWeekDate.setHours(0,0,0,0);
       for (let i = 0; i < 7; i++) {
-        const d = new Date(startOfWeek);
+        const d = new Date(startOfWeekDate);
         d.setDate(d.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
         const dayTrans = allTransactions.filter((t: any) => t.date.split('T')[0] === dateStr && t.type === 'expense');
@@ -152,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
       <div className="page-head">
         <div>
           <h1>{t('nav.dashboard')}</h1>
-          <p className="sub">Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()} · <b>{daysLeft} {t('dashboard.days_left')}</b> · {t('dashboard.used_budget')} <b>{pctSpent}%</b></p>
+          <p className="sub">Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()} · còn <b>{daysLeft} {t('dashboard.days_left')}</b> · {t('dashboard.used_budget')} <b>{pctSpent}%</b></p>
         </div>
         <div className="page-head-actions">
           <button className="btn btn-outline btn-sm" onClick={handleExport}><Icon name="download" size={14} /><span>{t('dashboard.export_report')}</span></button>
@@ -161,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
       </div>
 
       <div className="kpi-row">
-        <Kpi primary label={t('dashboard.remaining')} value={remainingBudget.toLocaleString()} unit="đ" delta={`${pctSpent}% used`} meta={`${budgetLimit.toLocaleString()}đ limit`} bar={Math.min(100, pctSpent)} onAction={onEditBudget} />
+        <Kpi primary label={t('dashboard.remaining')} value={remainingBudget.toLocaleString()} unit="đ" delta={`${pctSpent}% used`} meta={`${budgetLimit.toLocaleString()}đ limit`} bar={pctSpent} onAction={onEditBudget} />
         <Kpi icon="arrow-right" label={t('dashboard.spent')} value={totalSpentKPI.toLocaleString()} unit="đ" delta="▲ 0%" deltaDir="down" meta="vs last month" />
         <Kpi icon="piggy" label={t('dashboard.savings')} value={savedValue.toLocaleString()} unit="đ" delta="▲ 0%" deltaDir="up" meta="over goal" />
         <Kpi icon="zap" label={t('dashboard.streak')} value={currentStreak} unit={` ${t('common.days')}`} delta={`🔥 Score: ${survivalScore}`} meta="Keeping records" />
@@ -172,9 +177,52 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
         <div className="roast-body">
           <div className="roast-label">{t('dashboard.roast_title')}</div>
           <div className="roast-text">
-            {totalSpentKPI > budgetLimit * 0.8 && budgetLimit > 0
-              ? (locale === 'vi' ? "Bạn sắp cháy túi rồi đấy! 🛑" : "You are about to burn out your wallet! 🛑")
-              : (locale === 'vi' ? "Tình hình tài chính vẫn ổn. ☕️" : "Financial status is still okay. ☕️")}
+            {remainingBudget < 0
+              ? (locale === 'vi' ? "Bạn đã tiêu quá lố rồi! Dừng lại ngay! 🛑" : "You have overspent! Stop now! 🛑")
+              : remainingBudget < budgetLimit * 0.2 && budgetLimit > 0
+                ? (locale === 'vi' ? "Bạn sắp cháy túi rồi đấy! 🛑" : "You are about to burn out your wallet! 🛑")
+                : (locale === 'vi' ? "Tình hình tài chính vẫn ổn. ☕️" : "Financial status is still okay. ☕️")}
+          </div>
+        </div>
+      </div>
+
+      <div className="card flush" style={{ marginBottom: '22px' }}>
+        <div className="card-h">
+          <div>
+            <h3>{t('dashboard.daily_spent')}</h3>
+            <div className="sub"><b>{avgSpend.toLocaleString()}đ</b> / day</div>
+          </div>
+          <div className="seg">
+            <button className={dailyPeriod === 'week' ? 'active' : ''} onClick={() => setDailyPeriod('week')}>{locale === 'vi' ? 'Tuần' : 'Week'}</button>
+            <button className={dailyPeriod === 'month' ? 'active' : ''} onClick={() => setDailyPeriod('month')}>{locale === 'vi' ? 'Tháng' : 'Month'}</button>
+          </div>
+        </div>
+        <div className="card-body" style={{ padding: '24px 32px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '140px' }}>
+            {dailyData.map((d, i) => {
+              const maxDay = Math.max(...dailyData.map(x => x.total), 1);
+              const heightPct = (d.total / maxDay) * 100;
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: '6px', alignItems: 'center' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--t3)', whiteSpace: 'nowrap' }}>{d.total > 0 ? Number(d.total).toLocaleString() + 'đ' : ''}</div>
+                  <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', background: 'var(--bg-2)' }}>
+                    {d.segments.map((s: any, si: number) => (
+                      <div key={si} style={{ width: '100%', height: `${(s.amount / d.total) * 100}%`, background: s.color }} />
+                    ))}
+                    <div style={{ width: '100%', height: `${100 - heightPct}%` }} />
+                  </div>
+                  <div style={{ fontSize: '9px', textAlign: 'center', color: d.isToday ? 'var(--purple-700)' : 'var(--t3)', fontWeight: d.isToday ? 800 : 500 }}>{d.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', borderTop: '1px solid var(--line-2)', paddingTop: '16px' }}>
+            {data.allCategories?.filter((c: any) => c.type === 'expense').slice(0, 6).map((c: any) => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c.color }} />
+                <span style={{ fontSize: '11px', color: 'var(--t2)', fontWeight: 600 }}>{c.name}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -221,65 +269,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
         <div className="card flush">
           <div className="card-h">
             <div>
-              <h3>{t('dashboard.daily_spent')}</h3>
-              <div className="sub"><b>{avgSpend.toLocaleString()}đ</b> / day</div>
+              <h3>{t('dashboard.recent')}</h3>
+              <div className="sub">Your latest transactions</div>
             </div>
-            <div className="seg">
-              <button className={dailyPeriod === 'week' ? 'active' : ''} onClick={() => setDailyPeriod('week')}>{locale === 'vi' ? 'Tuần' : 'Week'}</button>
-              <button className={dailyPeriod === 'month' ? 'active' : ''} onClick={() => setDailyPeriod('month')}>{locale === 'vi' ? 'Tháng' : 'Month'}</button>
-            </div>
+            <button className="btn btn-ghost btn-sm" onClick={onSeeAll}>{locale === 'vi' ? 'Xem tất cả' : 'See all'}</button>
           </div>
-          <div className="card-body" style={{ padding: '24px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '140px' }}>
-              {dailyData.map((d, i) => {
-                const maxDay = Math.max(...dailyData.map(x => x.total), 1);
-                const heightPct = (d.total / maxDay) * 100;
-                return (
-                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: '6px' }}>
-                    <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', background: 'var(--bg-2)' }}>
-                      {d.segments.map((s: any, si: number) => (
-                        <div key={si} style={{ width: '100%', height: `${(s.amount / d.total) * 100}%`, background: s.color }} />
-                      ))}
-                      <div style={{ width: '100%', height: `${100 - heightPct}%` }} />
-                    </div>
-                    <div style={{ fontSize: '9px', textAlign: 'center', color: d.isToday ? 'var(--purple-700)' : 'var(--t3)', fontWeight: d.isToday ? 800 : 500 }}>{d.label}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="card flush">
-        <div className="card-h">
-          <div>
-            <h3>{t('dashboard.recent')}</h3>
-            <div className="sub">Your latest transactions</div>
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={onSeeAll}>{locale === 'vi' ? 'Xem tất cả' : 'See all'}</button>
-        </div>
-        <div className="card-body tight">
-          <table className="tbl">
-            <tbody>
-              {allTransactions.slice(0, 8).map((t: any) => (
-                <tr key={t.id}>
-                  <td>
-                    <div className="tx-cell">
-                      <div className={`tx-cat-ico ${t.categories?.icon || 'other'}`} style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}><Icon name={(t.categories?.icon as any) || 'list'} size={14} /></div>
-                      <div>
-                        <div className="tx-name">{t.note || t.categories?.name || 'Expense'}</div>
-                        <div className="tx-note">{new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US')}</div>
+          <div className="card-body tight">
+            <table className="tbl">
+              <tbody>
+                {allTransactions.slice(0, 8).map((t: any) => (
+                  <tr key={t.id}>
+                    <td>
+                      <div className="tx-cell">
+                        <div className={`tx-cat-ico ${t.categories?.icon || 'other'}`} style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}><Icon name={(t.categories?.icon as any) || 'list'} size={14} /></div>
+                        <div>
+                          <div className="tx-name">{t.note || t.categories?.name || 'Expense'}</div>
+                          <div className="tx-note">{new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US')}</div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td><span className="badge gray" style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}>{t.categories?.name || 'Other'}</span></td>
-                  <td className="num"><span className={t.type === 'expense' ? 'amt-spend' : 'amt-save'} style={{ fontWeight: 700, fontSize: '14px' }}>{t.type === 'expense' ? '-' : '+'}{Number(t.amount).toLocaleString()}đ</span></td>
-                </tr>
-              ))}
-              {allTransactions.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--t3)' }}>No transactions.</td></tr>}
-            </tbody>
-          </table>
+                    </td>
+                    <td><span className="badge gray" style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}>{t.categories?.name || 'Other'}</span></td>
+                    <td className="num"><span className={t.type === 'expense' ? 'amt-spend' : 'amt-save'} style={{ fontWeight: 700, fontSize: '14px' }}>{t.type === 'expense' ? '-' : '+'}{Number(t.amount).toLocaleString()}đ</span></td>
+                  </tr>
+                ))}
+                {allTransactions.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--t3)' }}>No transactions.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

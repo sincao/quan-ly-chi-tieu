@@ -15,7 +15,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [locale, setLocaleState] = useState<Locale>('vi');
 
   useEffect(() => {
-    const saved = localStorage.getItem('app_locale') as Locale;
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('app_locale') as Locale : null;
     if (saved && (saved === 'vi' || saved === 'en')) {
       setLocaleState(saved);
     }
@@ -29,14 +29,25 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const t = (path: string): string => {
     const keys = path.split('.');
     let current: any = translations[locale];
+    
     for (const key of keys) {
-      if (current[key]) {
+      if (current && typeof current === 'object' && key in current) {
         current = current[key];
       } else {
-        return path; // Fallback to path if not found
+        // If not found in current locale, try 'vi' as fallback
+        let fallback: any = translations['vi'];
+        for (const fkey of keys) {
+          if (fallback && typeof fallback === 'object' && fkey in fallback) {
+            fallback = fallback[fkey];
+          } else {
+            fallback = path;
+            break;
+          }
+        }
+        return typeof fallback === 'string' ? fallback : path;
       }
     }
-    return current;
+    return typeof current === 'string' ? current : path;
   };
 
   return (
