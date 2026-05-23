@@ -15,8 +15,10 @@ import EditBudgetModal from '@/components/dashboard/EditBudgetModal';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { getDashboardData, getSquadData } from '@/lib/supabase/queries';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function Home() {
+  const { t } = useLanguage();
   const [route, setRoute] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -47,11 +49,8 @@ export default function Home() {
       } else {
         setUser(session.user);
         const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
-        if (!hasSeenOnboarding) {
-          setRoute('onboarding');
-        } else {
-          setRoute('dashboard');
-        }
+        if (!hasSeenOnboarding) setRoute('onboarding');
+        else setRoute('dashboard');
         fetchCounts(session.user.id);
       }
     };
@@ -75,30 +74,17 @@ export default function Home() {
     });
 
     return () => subscription.unsubscribe();
-  }, [refreshKey, supabase.auth]);
+  }, [refreshKey]);
 
   if (route === null) return <div style={{ height: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>Loading...</div>;
 
-  if (route === 'login') {
-    return <LoginScreen onLogin={() => setRoute('dashboard')} />;
-  }
-
-  if (route === 'onboarding') {
-    return user ? <Onboarding userId={user.id} onComplete={() => setRoute('dashboard')} /> : null;
-  }
+  if (route === 'login') return <LoginScreen onLogin={() => setRoute('dashboard')} />;
+  if (route === 'onboarding') return user ? <Onboarding userId={user.id} onComplete={() => setRoute('dashboard')} /> : null;
 
   const renderContent = () => {
     switch (route) {
       case 'dashboard':
-        return user ? (
-          <Dashboard 
-            key={refreshKey}
-            user={user} 
-            onAdd={() => setAddOpen(true)} 
-            onEditBudget={() => setBudgetOpen(true)}
-            onSeeAll={() => setRoute('transactions')}
-          />
-        ) : null;
+        return user ? <Dashboard key={refreshKey} user={user} onAdd={() => setAddOpen(true)} onEditBudget={() => setBudgetOpen(true)} onSeeAll={() => setRoute('transactions')} /> : null;
       case 'transactions':
         return <TransactionsPage onAdd={() => setAddOpen(true)} refreshKey={refreshKey} />;
       case 'leaderboard':
@@ -107,15 +93,7 @@ export default function Home() {
       case 'squad-campaigns':
       case 'squad-duels':
       case 'squad-members':
-        return user ? (
-          <SquadPage 
-            user={user} 
-            subRoute={
-              route === 'squad' || route === 'squad-campaigns' ? 'campaigns' : 
-              route === 'squad-duels' ? 'duels' : 'members'
-            } 
-          />
-        ) : null;
+        return user ? <SquadPage user={user} subRoute={route === 'squad' || route === 'squad-campaigns' ? 'campaigns' : route === 'squad-duels' ? 'duels' : 'members'} /> : null;
       case 'settings':
         return user ? <SettingsPage user={user} onLogout={() => setRoute('login')} /> : null;
       default:
@@ -124,20 +102,20 @@ export default function Home() {
   };
 
   const getTitle = () => {
-    if (route?.startsWith('squad')) return 'Nhóm tiết kiệm';
+    if (route?.startsWith('squad')) return t('nav.squad');
     switch (route) {
-      case 'dashboard': return 'Tổng quan';
-      case 'transactions': return 'Giao dịch';
-      case 'leaderboard': return 'Xếp hạng';
-      case 'settings': return 'Cài đặt';
-      default: return 'Quản Lý Chi Tiêu';
+      case 'dashboard': return t('nav.dashboard');
+      case 'transactions': return t('nav.transactions');
+      case 'leaderboard': return t('nav.leaderboard');
+      case 'settings': return t('nav.settings');
+      default: return 'QUẢN LÝ CHI TIÊU';
     }
   };
 
   const getBreadcrumbs = () => {
     if (route?.startsWith('squad-')) {
       const sub = route.split('-')[1];
-      const subLabel = sub === 'campaigns' ? 'Chiến dịch' : sub === 'duels' ? 'Duel 1v1' : 'Bạn bè';
+      const subLabel = sub === 'campaigns' ? t('nav.campaigns') : sub === 'duels' ? t('nav.duels') : t('nav.members');
       return [subLabel];
     }
     return [];
@@ -148,11 +126,7 @@ export default function Home() {
       <div className={`sidebar-area ${isSidebarOpen ? 'open' : ''}`}>
         <Sidebar 
           currentRoute={route} 
-          setRoute={(r) => {
-            setRoute(r);
-            setSidebarOpen(false);
-          }} 
-          onAdd={() => setAddOpen(true)}
+          setRoute={(r) => { setRoute(r); setSidebarOpen(false); }} 
           open={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
           user={user}
@@ -160,35 +134,10 @@ export default function Home() {
         />
       </div>
       {isSidebarOpen && <div className="sidebar-scrim" onClick={() => setSidebarOpen(false)}></div>}
-      
-      <div className="topbar-area">
-        <Topbar title={getTitle()} breadcrumbs={getBreadcrumbs()} />
-      </div>
-      
-      <main className="main-area">
-        {renderContent()}
-      </main>
-
-      {user && (
-        <AddExpenseModal 
-          open={isAddOpen} 
-          onClose={() => setAddOpen(false)} 
-          userId={user.id}
-          onSuccess={() => setRefreshKey(prev => prev + 1)}
-        />
-      )}
-      {user && (
-        <EditBudgetModal 
-          open={isBudgetOpen} 
-          onClose={() => setBudgetOpen(false)} 
-          userId={user.id}
-          currentAmount={0} 
-          onSuccess={() => {
-            console.log('Budget updated successfully');
-            setRefreshKey(prev => prev + 1);
-          }}
-        />
-      )}
+      <div className="topbar-area"><Topbar title={getTitle()} breadcrumbs={getBreadcrumbs()} /></div>
+      <main className="main-area">{renderContent()}</main>
+      {user && <AddExpenseModal open={isAddOpen} onClose={() => setAddOpen(false)} userId={user.id} onSuccess={() => setRefreshKey(prev => prev + 1)} />}
+      {user && <EditBudgetModal open={isBudgetOpen} onClose={() => setBudgetOpen(false)} userId={user.id} currentAmount={0} onSuccess={() => setRefreshKey(prev => prev + 1)} />}
     </div>
   );
 }
