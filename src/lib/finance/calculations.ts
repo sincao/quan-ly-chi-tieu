@@ -71,3 +71,37 @@ export function getFinancialStatus(
   
   return 'healthy'
 }
+
+/**
+ * Tính toán số ngày liên tiếp (streak) ghi chép chi tiêu
+ */
+export function calculateStreak(transactions: { date: string }[]): number {
+  if (!transactions || transactions.length === 0) return 0;
+
+  // Lấy danh sách các ngày duy nhất, bắt đầu từ đầu ngày, sắp xếp giảm dần
+  const dates = Array.from(
+    new Set(
+      transactions.map((t) => startOfDay(new Date(t.date)).getTime())
+    )
+  ).sort((a, b) => b - a);
+
+  const today = startOfDay(new Date()).getTime();
+  const yesterday = today - 86400000;
+
+  // Nếu ngày gần nhất cũ hơn ngày hôm qua, streak là 0
+  if (dates[0] < yesterday) return 0;
+
+  let streak = 1;
+  let currentCheck = dates[0];
+
+  for (let i = 1; i < dates.length; i++) {
+    if (dates[i] === currentCheck - 86400000) {
+      streak++;
+      currentCheck = dates[i];
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
