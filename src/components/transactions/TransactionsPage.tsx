@@ -115,7 +115,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
       t.amount,
       t.type === 'expense' ? (locale === 'vi' ? 'Chi tiêu' : 'Expense') : (locale === 'vi' ? 'Thu nhập' : 'Income')
     ]);
-    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+    const csvContent = [headers.join(','), ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(','))].join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

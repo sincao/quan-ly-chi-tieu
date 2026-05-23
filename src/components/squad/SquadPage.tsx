@@ -427,7 +427,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                 </thead>
                 <tbody>
                   {membersList.map((p: any) => {
-                    const campaignCount = campaigns.filter(c => c.members?.some((m: any) => m.user_id === p.id)).length;
+                    const campaignCount = campaigns.filter((c: any) => c.members?.some((m: any) => m.user_id === p.id)).length;
                     return (
                       <tr key={p.id}>
                         <td style={{ paddingLeft: '24px' }}>

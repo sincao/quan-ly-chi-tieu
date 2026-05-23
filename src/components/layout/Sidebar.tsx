@@ -23,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
   useEffect(() => {
     if (!user) return;
     async function loadProfile() {
+      if (!user) return;
       const { data } = await supabase
         .from('profiles')
         .select('first_name, last_name, display_name')

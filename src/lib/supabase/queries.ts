@@ -104,7 +104,7 @@ export async function createMonthlyBudget(userId: string, amount: number) {
   return { data, error };
 }
 
-export async function updateProfile(userId: string, updates: { display_name?: string; avatar_url?: string; first_name?: string; last_name?: string; email?: string; tieugon_id?: string }) {
+export async function updateProfile(userId: string, updates: { display_name?: string; avatar_url?: string | null; first_name?: string; last_name?: string; email?: string; tieugon_id?: string }) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('profiles')

@@ -131,7 +131,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
     if (!allTransactions.length) return;
     const headers = locale === 'vi' ? ['Ngày', 'Danh mục', 'Số tiền', 'Loại', 'Ghi chú'] : ['Date', 'Category', 'Amount', 'Type', 'Note'];
     const rows = allTransactions.map((t: any) => [new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US'), t.categories?.name || 'Other', t.amount, t.type, t.note || '']);
-    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+    const csvContent = [headers.join(','), ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(','))].join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
