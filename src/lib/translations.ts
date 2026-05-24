@@ -29,7 +29,8 @@ export const translations = {
       members_count: 'đang tham gia',
       status: 'TRẠNG THÁI',
       time_left: 'còn lại',
-      stake_label: 'Cược'
+      stake_label: 'Cược',
+      selected: 'đã chọn'
     },
     nav: {
       dashboard: 'Tổng quan',
@@ -334,7 +335,8 @@ export const translations = {
       members_count: 'participating',
       status: 'STATUS',
       time_left: 'left',
-      stake_label: 'Stake'
+      stake_label: 'Stake',
+      selected: 'selected'
     },
     nav: {
       dashboard: 'Overview',

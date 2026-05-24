@@ -225,6 +225,10 @@ export default function Home() {
           <Icon name="trophy" size={20} />
           <span>{t('nav.leaderboard')}</span>
         </button>
+        <button className={`bottom-nav-item${route === 'settings' ? ' active' : ''}`} onClick={() => setRoute('settings')}>
+          <Icon name="user" size={20} />
+          <span>{t('settings.profile')}</span>
+        </button>
       </nav>
     </div>
   );

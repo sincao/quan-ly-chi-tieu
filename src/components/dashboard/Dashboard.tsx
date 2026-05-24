@@ -193,7 +193,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
         </div>
       </div>
 
-      <div className="kpi-row">
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
+        <style jsx>{`
+          @media (min-width: 768px) {
+            .kpi-grid { grid-template-columns: repeat(4, 1fr) !important; }
+          }
+        `}</style>
         <Kpi primary label={t('dashboard.remaining')} value={remainingBudget.toLocaleString()} unit="đ" delta={`${pctSpent}% used`} meta={`${budgetLimit.toLocaleString()}đ limit`} bar={pctSpent} onAction={onEditBudget} />
         <Kpi icon="arrow-right" label={t('dashboard.spent')} value={totalSpentKPI.toLocaleString()} unit="đ" delta="▲ 0%" deltaDir="down" meta="vs last month" />
         <Kpi icon="piggy" label={t('dashboard.savings')} value={savedValue.toLocaleString()} unit="đ" delta="▲ 0%" deltaDir="up" meta="over goal" />

@@ -21,7 +21,8 @@ interface SquadPageProps {
 
 const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) => {
   const now = new Date();
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'duels' | 'members'>(subRoute as any);
   const [data, setData] = useState<any>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [friendships, setFriendships] = useState<any[]>([]);
@@ -45,6 +46,10 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
     onConfirm: () => {},
     type: 'primary'
   });
+
+  useEffect(() => {
+    setActiveTab(subRoute as any);
+  }, [subRoute]);
 
   useEffect(() => {
     async function loadData() {
@@ -149,35 +154,42 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>{t('common.loading')}</div>;
 
+  const handleAddClick = () => {
+    if (activeTab === 'campaigns') setCreateCampaignOpen(true);
+    else if (activeTab === 'duels') setCreateDuelOpen(true);
+    else setAddFriendOpen(true);
+  };
+
   return (
     <div className="main-inner">
-      <div className="page-head">
+      {/* DESKTOP HEADER */}
+      <div className="hidden md:flex page-head">
         <div>
           <h1>
-            {subRoute === 'campaigns' && t('squad.title_campaigns')}
-            {subRoute === 'duels' && t('squad.title_duels')}
-            {subRoute === 'members' && t('squad.title_friends')}
+            {activeTab === 'campaigns' && t('squad.title_campaigns')}
+            {activeTab === 'duels' && t('squad.title_duels')}
+            {activeTab === 'members' && t('squad.title_friends')}
           </h1>
           <p className="sub">
-            {subRoute === 'campaigns' && t('squad.sub_campaigns')}
-            {subRoute === 'duels' && t('squad.sub_duels')}
-            {subRoute === 'members' && t('squad.sub_friends')}
+            {activeTab === 'campaigns' && t('squad.sub_campaigns')}
+            {activeTab === 'duels' && t('squad.sub_duels')}
+            {activeTab === 'members' && t('squad.sub_friends')}
           </p>
         </div>
         <div className="page-head-actions">
-          {subRoute === 'campaigns' && (
+          {activeTab === 'campaigns' && (
             <button className="btn btn-primary" onClick={() => setCreateCampaignOpen(true)}>
               <Icon name="plus" size={16} />
               <span>{t('squad.create_campaign')}</span>
             </button>
           )}
-          {subRoute === 'duels' && (
+          {activeTab === 'duels' && (
             <button className="btn btn-primary" onClick={() => setCreateDuelOpen(true)}>
               <Icon name="zap" size={16} />
               <span>{t('squad.create_duel')}</span>
             </button>
           )}
-          {subRoute === 'members' && (
+          {activeTab === 'members' && (
             <button className="btn btn-primary" onClick={() => setAddFriendOpen(true)}>
               <Icon name="user" size={16} />
               <span>{t('squad.add_friend')}</span>
@@ -186,32 +198,185 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
         </div>
       </div>
 
+      {/* MOBILE HEADER */}
+      <div className="block md:hidden" style={{ padding: '0 4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--ink)' }}>Nhóm tiết kiệm</h1>
+            <p style={{ color: 'var(--t3)', fontSize: '14px', marginTop: '4px' }}>Cùng tiết kiệm, cùng bị roast 💀</p>
+          </div>
+          <button className="icon-btn" onClick={handleAddClick} style={{ background: 'var(--card)', border: '1px solid var(--line-2)', borderRadius: '8px' }}>
+            <Icon name="plus" size={20} />
+          </button>
+        </div>
+
+        <div className="squad-tabs" style={{ display: 'flex', gap: '8px', margin: '20px 0', overflowX: 'auto', paddingBottom: '4px' }}>
+          <button 
+            onClick={() => setActiveTab('campaigns')}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: activeTab === 'campaigns' ? 'var(--color-purple-600)' : 'var(--card)',
+              color: activeTab === 'campaigns' ? '#fff' : 'var(--t3)',
+              boxShadow: activeTab === 'campaigns' ? '0 4px 12px rgba(105, 56, 232, 0.25)' : 'none',
+              border: activeTab === 'campaigns' ? 'none' : '1px solid var(--line-2)',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {t('nav.campaigns')}
+            <span style={{ 
+              display: 'inline-grid', 
+              placeItems: 'center',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              fontSize: '11px',
+              background: activeTab === 'campaigns' ? 'rgba(255,255,255,0.2)' : 'var(--line-2)',
+              color: activeTab === 'campaigns' ? '#fff' : 'var(--t3)'
+            }}>
+              {campaigns.length}
+            </span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('duels')}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: activeTab === 'duels' ? 'var(--color-purple-600)' : 'var(--card)',
+              color: activeTab === 'duels' ? '#fff' : 'var(--t3)',
+              boxShadow: activeTab === 'duels' ? '0 4px 12px rgba(105, 56, 232, 0.25)' : 'none',
+              border: activeTab === 'duels' ? 'none' : '1px solid var(--line-2)',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {t('nav.duels')}
+            <span style={{ 
+              display: 'inline-grid', 
+              placeItems: 'center',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              fontSize: '11px',
+              background: activeTab === 'duels' ? 'rgba(255,255,255,0.2)' : 'var(--line-2)',
+              color: activeTab === 'duels' ? '#fff' : 'var(--t3)'
+            }}>
+              {duels.length}
+            </span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('members')}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 700,
+              background: activeTab === 'members' ? 'var(--color-purple-600)' : 'var(--card)',
+              color: activeTab === 'members' ? '#fff' : 'var(--t3)',
+              boxShadow: activeTab === 'members' ? '0 4px 12px rgba(105, 56, 232, 0.25)' : 'none',
+              border: activeTab === 'members' ? 'none' : '1px solid var(--line-2)',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {t('nav.members')}
+          </button>
+        </div>
+      </div>
+
       <div style={{ marginTop: '12px' }}>
-        {subRoute === 'campaigns' ? (
+        {activeTab === 'campaigns' ? (
           <div className="dash-row r-1-1">
             {campaigns.map((c: any) => {
               const dailyAmt = Number(c.daily_savings || 0);
               const startDate = new Date(c.created_at || now);
-              const diffTime = Math.abs(now.getTime() - startDate.getTime());
-              const daysPassed = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
               
               const membersCount = c.members?.length || 0;
               const isOwner = c.creator_id === user.id;
 
-              // Tính tổng tiết kiệm của cả nhóm từ dữ liệu thật
               const totalGroupSavings = c.members?.reduce((sum: number, m: any) => {
                 const s = m.current_savings?.[0]?.current_savings || 0;
                 return sum + Number(s);
               }, 0) || 0;
 
-              // Mục tiêu tổng của cả nhóm: (Tiết kiệm hàng ngày * Số ngày của chiến dịch) * Số thành viên
               const totalDays = Math.max(1, Math.ceil((new Date(c.end_date).getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
               const totalGroupGoal = dailyAmt * totalDays * membersCount;
               const pct = totalGroupGoal > 0 ? Math.round((totalGroupSavings / totalGroupGoal) * 100) : 0;
               
               return (
                 <div key={c.id} className="card flush" style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '20px' }}>
+                  {/* MOBILE DESIGN CARD BODY (conditional styling or separate block) */}
+                  <div className="block md:hidden" style={{ padding: '20px' }}>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--bg-2)', display: 'grid', placeItems: 'center', fontSize: '24px' }}>
+                        {c.emoji}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                          <div>
+                            <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>{c.name}</h2>
+                            <p style={{ fontSize: '13px', color: 'var(--t3)', marginTop: '4px' }}>{c.description}</p>
+                          </div>
+                          <span className="badge" style={{ background: 'var(--purple-50)', color: 'var(--color-purple-600)', padding: '4px 10px', borderRadius: '8px', fontSize: '12px' }}>
+                            {c.daysLeft}d
+                          </span>
+                        </div>
+                        
+                        <div style={{ marginTop: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                            <span style={{ color: 'var(--t3)', fontWeight: 600 }}>{t('squad.group_progress')}</span>
+                            <span style={{ color: 'var(--color-purple-600)', fontWeight: 800 }}>{pct}%</span>
+                          </div>
+                          <div className="bar" style={{ height: '8px', background: 'var(--line-2)' }}>
+                            <i style={{ width: `${Math.min(100, pct)}%`, background: 'var(--color-purple-600)' }}></i>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--green)', fontSize: '13px', fontWeight: 700 }}>4 {t('campaign_detail.holding')}</span>
+                            <span style={{ color: 'var(--rose)', fontSize: '13px', fontWeight: 700 }}>· 1 {t('campaign_detail.violated')}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--t3)' }}>
+                            {membersCount} {t('nav.members')}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '12px' }}>
+                          {(c.members || []).slice(0, 5).map((m: any) => (
+                            <div key={m.user_id} style={{ 
+                              width: '28px', 
+                              height: '28px', 
+                              borderRadius: '50%', 
+                              border: '2px solid #fff',
+                              background: m.profiles?.avatar_url ? `url(${m.profiles.avatar_url}) center/cover` : 'var(--color-purple-400)',
+                              display: 'grid',
+                              placeItems: 'center',
+                              fontSize: '10px',
+                              color: '#fff',
+                              fontWeight: 700
+                            }}>
+                              {!m.profiles?.avatar_url && getInitials(m.profiles)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DESKTOP DESIGN CARD BODY */}
+                  <div className="hidden md:block" style={{ padding: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -244,7 +409,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                     </div>
                   </div>
 
-                  <table className="tbl" style={{ borderTop: '1px solid var(--line-2)', flex: 1 }}>
+                  <table className="tbl hidden md:table" style={{ borderTop: '1px solid var(--line-2)', flex: 1 }}>
                     <thead>
                       <tr>
                         <th style={{ paddingLeft: '20px', background: 'transparent', fontSize: '10px' }}>{t('leaderboard.user')}</th>
@@ -314,7 +479,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
               );
             })}
           </div>
-        ) : subRoute === 'duels' ? (
+        ) : activeTab === 'duels' ? (
           <div className="dash-row r-1-1">
             {duels.map((d: any) => {
               const isCreator = d.creator_id === user.id;
@@ -422,10 +587,9 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                 <thead>
                   <tr>
                     <th style={{ paddingLeft: '24px' }}>{t('squad.name_col')}</th>
-                    <th>{t('squad.joined_campaigns')}</th>
-                    <th>{t('leaderboard.streak')}</th>
-                    <th>{t('leaderboard.savings')}</th>
-                    <th style={{ width: '40px' }}></th>
+                    <th className="hidden md:table-cell">{t('squad.joined_campaigns')}</th>
+                    <th className="hidden md:table-cell">{t('leaderboard.streak')}</th>
+                    <th style={{ textAlign: 'right', paddingRight: '24px' }}>{t('leaderboard.savings')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -442,12 +606,13 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td className="hidden md:table-cell">
                           <span className="badge gray" style={{ borderRadius: '6px', padding: '4px 10px', fontSize: '12px' }}>{campaignCount} {t('squad.campaigns_badge')}</span>
                         </td>
-                        <td style={{ fontWeight: 600, color: 'var(--t2)', fontSize: '13px' }}>🔥 {p.current_streak || 0} {t('common.days')}</td>
-                        <td style={{ fontWeight: 800, color: 'var(--purple-700)', fontSize: '14px' }}>{Number(p.monthly_savings || 0).toLocaleString()}đ</td>
-                        <td style={{ textAlign: 'right', paddingRight: '16px' }}><button className="icon-btn sm" style={{ opacity: 0.3 }}><Icon name="more-horizontal" size={14} /></button></td>
+                        <td className="hidden md:table-cell" style={{ fontWeight: 600, color: 'var(--t2)', fontSize: '13px' }}>🔥 {p.current_streak || 0} {t('common.days')}</td>
+                        <td style={{ textAlign: 'right', paddingRight: '24px', fontWeight: 800, color: 'var(--purple-700)', fontSize: '14px' }}>
+                          {Number(p.monthly_savings || 0).toLocaleString()}đ
+                        </td>
                       </tr>
                     );
                   })}

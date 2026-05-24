@@ -66,7 +66,8 @@ const LeaderboardPage: React.FC = () => {
 
   return (
     <div className="main-inner">
-      <div className="page-head">
+      {/* DESKTOP HEADER */}
+      <div className="hidden md:flex page-head">
         <div>
           <h1>{t('leaderboard.title')}</h1>
           <p className="sub">
@@ -97,6 +98,73 @@ const LeaderboardPage: React.FC = () => {
                <span>⚔ Win rate</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* MOBILE HEADER */}
+      <div className="block md:hidden" style={{ padding: '0 20px', marginBottom: '24px' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--ink)' }}>{t('leaderboard.title')}</h1>
+          <p style={{ color: 'var(--t3)', fontSize: '14px', marginTop: '4px' }}>
+            {data.length} {t('leaderboard.people_participating')} • {t('leaderboard.current_rank_prefix')} <strong style={{ color: 'var(--purple-700)' }}>#{myRank > 0 ? myRank : '--'}</strong>
+          </p>
+        </div>
+
+        <div className="seg" style={{ display: 'flex', width: '100%', padding: '4px', background: 'var(--bg-2)', borderRadius: '14px' }}>
+          <button 
+            className={metric === 'streak' ? 'active' : ''} 
+            onClick={() => setMetric('streak')}
+            style={{ 
+              flex: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '6px',
+              padding: '10px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 700,
+              transition: 'all 0.2s'
+            }}
+          >
+            🔥 <span>Streak</span>
+          </button>
+          <button 
+            className={metric === 'savings' ? 'active' : ''} 
+            onClick={() => setMetric('savings')}
+            style={{ 
+              flex: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '6px',
+              padding: '10px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 700,
+              transition: 'all 0.2s'
+            }}
+          >
+             <span>💰 {t('leaderboard.savings_label')}</span>
+          </button>
+          <button 
+            className={metric === 'win_rate' ? 'active' : ''} 
+            onClick={() => setMetric('win_rate')}
+            style={{ 
+              flex: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '6px',
+              padding: '10px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 700,
+              transition: 'all 0.2s'
+            }}
+          >
+             <span>⚔ Win rate</span>
+          </button>
         </div>
       </div>
 

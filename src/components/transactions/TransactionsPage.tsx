@@ -18,8 +18,8 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
   const [q, setQ] = useState('');
   const [selectedCat, setSelectedCat] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('month');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
-  // Custom range state
   const [isCustomModalOpen, setCustomModalOpen] = useState(false);
   const [tempStart, setTempStart] = useState<string>('');
   const [tempEnd, setTempEnd] = useState<string>('');
@@ -61,6 +61,40 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
   const transactions = data?.transactions || [];
   const categories = data?.allCategories || [];
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    setConfirm({
+      open: true,
+      title: t('transactions.confirm_delete_title'),
+      message: selectedIds.length === 1 ? t('transactions.confirm_delete_msg') : `Bạn có chắc muốn xoá ${selectedIds.length} giao dịch đã chọn?`,
+      type: 'danger',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await Promise.all(selectedIds.map(id => deleteTransaction(id)));
+          setLocalRefresh(prev => prev + 1);
+          setSelectedIds([]);
+        } finally {
+          setLoading(false);
+          setConfirm(c => ({ ...c, open: false }));
+        }
+      }
+    });
+  };
+
+  const handleEditSelected = () => {
+    if (selectedIds.length !== 1) return;
+    const target = transactions.find((t: any) => t.id === selectedIds[0]);
+    if (target) handleEdit(target);
+  };
+
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
   const handleDelete = (id: string) => {
     setConfirm({
       open: true,
@@ -69,16 +103,11 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
       type: 'danger',
       onConfirm: async () => {
         const { error } = await deleteTransaction(id);
-        if (!error) {
-          setLocalRefresh(prev => prev + 1);
-        }
+        if (!error) setLocalRefresh(prev => prev + 1);
         setConfirm(c => ({ ...c, open: false }));
       }
     });
   };
-
-  const [editingTransaction, setEditingTransaction] = useState<any>(null);
-  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
   const handleEdit = (t_item: any) => {
     setEditingTransaction({
@@ -105,6 +134,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
     if (!error) {
       setLocalRefresh(prev => prev + 1);
       setEditingTransaction(null);
+      setSelectedIds([]);
     }
   };
 
@@ -112,79 +142,39 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
     const note = t.note || '';
     const catName = t.categories?.name || '';
     const matchQ = note.toLowerCase().includes(q.toLowerCase()) || catName.toLowerCase().includes(q.toLowerCase());
-    
-    // Filter by Category
     const matchCat = selectedCat === 'all' || t.category_id === selectedCat;
-    
-    // Filter by Period
     const tDate = parseISO(t.date);
     const now = new Date();
     let matchPeriod = true;
-    
-    if (selectedPeriod === 'week') {
-      matchPeriod = isWithinInterval(tDate, { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) });
-    } else if (selectedPeriod === 'month') {
-      matchPeriod = isWithinInterval(tDate, { start: startOfMonth(now), end: endOfMonth(now) });
-    } else if (selectedPeriod === 'year') {
-      matchPeriod = isWithinInterval(tDate, { start: startOfYear(now), end: endOfYear(now) });
-    } else if (selectedPeriod === 'custom') {
-      if (appliedStart && appliedEnd) {
-        matchPeriod = isWithinInterval(tDate, { start: parseISO(appliedStart), end: parseISO(appliedEnd) });
-      } else if (appliedStart) {
-        matchPeriod = tDate >= parseISO(appliedStart);
-      } else if (appliedEnd) {
-        matchPeriod = tDate <= parseISO(appliedEnd);
-      }
+    if (selectedPeriod === 'week') matchPeriod = isWithinInterval(tDate, { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) });
+    else if (selectedPeriod === 'month') matchPeriod = isWithinInterval(tDate, { start: startOfMonth(now), end: endOfMonth(now) });
+    else if (selectedPeriod === 'year') matchPeriod = isWithinInterval(tDate, { start: startOfYear(now), end: endOfYear(now) });
+    else if (selectedPeriod === 'custom') {
+      if (appliedStart && appliedEnd) matchPeriod = isWithinInterval(tDate, { start: parseISO(appliedStart), end: parseISO(appliedEnd) });
+      else if (appliedStart) matchPeriod = tDate >= parseISO(appliedStart);
+      else if (appliedEnd) matchPeriod = tDate <= parseISO(appliedEnd);
     }
-
     return matchQ && matchCat && matchPeriod;
   });
 
   const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
-    if (val === 'custom') {
-      setCustomModalOpen(true);
-    } else {
-      setSelectedPeriod(val);
-      setAppliedStart('');
-      setAppliedEnd('');
-    }
+    if (val === 'custom') setCustomModalOpen(true);
+    else { setSelectedPeriod(val); setAppliedStart(''); setAppliedEnd(''); }
   };
 
-  const handleApplyCustom = () => {
-    setAppliedStart(tempStart);
-    setAppliedEnd(tempEnd);
-    setSelectedPeriod('custom');
-    setCustomModalOpen(false);
-  };
-
-  const handleResetFilters = () => {
-    setQ('');
-    setSelectedCat('all');
-    setSelectedPeriod('month');
-    setAppliedStart('');
-    setAppliedEnd('');
-    setTempStart('');
-    setTempEnd('');
-  };
+  const handleApplyCustom = () => { setAppliedStart(tempStart); setAppliedEnd(tempEnd); setSelectedPeriod('custom'); setCustomModalOpen(false); };
+  const handleResetFilters = () => { setQ(''); setSelectedCat('all'); setSelectedPeriod('month'); setAppliedStart(''); setAppliedEnd(''); setTempStart(''); setTempEnd(''); };
 
   const handleExportCSV = () => {
     if (filtered.length === 0) return;
     const headers = locale === 'vi' ? ['Ngày', 'Tên/Ghi chú', 'Danh mục', 'Số tiền', 'Loại'] : ['Date', 'Note', 'Category', 'Amount', 'Type'];
-    const rows = filtered.map((t: any) => [
-      new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US'),
-      t.note || t.categories?.name || t('transactions.expense'),
-      t.categories?.name || t('transactions.other'),
-      t.amount,
-      t.type === 'expense' ? t('transactions.expense') : t('transactions.income')
-    ]);
+    const rows = filtered.map((t: any) => [new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US'), t.note || t.categories?.name || t('transactions.expense'), t.categories?.name || t('transactions.other'), t.amount, t.type === 'expense' ? t('transactions.expense') : t('transactions.income')]);
     const csvContent = [headers.join(','), ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(','))].join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `Transactions_${format(new Date(), 'ddMMyyyy')}.csv`;
-    link.click();
+    link.href = url; link.download = `Transactions_${format(new Date(), 'ddMMyyyy')}.csv`; link.click();
   };
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>{t('common.loading')}</div>;
@@ -192,7 +182,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
   const isFiltered = q !== '' || selectedCat !== 'all' || selectedPeriod !== 'month' || appliedStart !== '';
 
   return (
-    <div className="main-inner">
+    <div className="main-inner" style={{ position: 'relative', paddingBottom: selectedIds.length > 0 ? '80px' : '0' }}>
       <div className="page-head">
         <div>
           <h1>{t('transactions.title')}</h1>
@@ -227,24 +217,14 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
           />
         </div>
         
-        <select 
-          className="select" 
-          value={selectedCat} 
-          onChange={(e) => setSelectedCat(e.target.value)}
-          style={{ height: '38px', fontSize: '13px', fontWeight: 500 }}
-        >
+        <select className="select" value={selectedCat} onChange={(e) => setSelectedCat(e.target.value)} style={{ height: '38px', fontSize: '13px', fontWeight: 500 }}>
           <option value="all">{t('transactions.all_categories')}</option>
           {categories.map((c: any) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
 
-        <select 
-          className="select" 
-          value={selectedPeriod} 
-          onChange={handlePeriodChange}
-          style={{ height: '38px', fontSize: '13px', fontWeight: 500 }}
-        >
+        <select className="select" value={selectedPeriod} onChange={handlePeriodChange} style={{ height: '38px', fontSize: '13px', fontWeight: 500 }}>
           <option value="week">{t('transactions.this_week')}</option>
           <option value="month">{t('transactions.this_month')}</option>
           <option value="year">{t('transactions.this_year')}</option>
@@ -262,11 +242,20 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
       )}
 
       <div className="card flush">
-        <table className="tbl">
+        {/* DESKTOP TABLE */}
+        <table className="tbl hidden md:table">
           <thead>
             <tr>
               <th className="checkbox-col" style={{ width: '40px', textAlign: 'center' }}>
-                <input type="checkbox" className="checkbox" />
+                <input 
+                  type="checkbox" 
+                  className="checkbox" 
+                  checked={selectedIds.length === filtered.length && filtered.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(filtered.map((t: any) => t.id));
+                    else setSelectedIds([]);
+                  }}
+                />
               </th>
               <th>{t('transactions.title')}</th>
               <th>{t('transactions.category')}</th>
@@ -280,7 +269,12 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
             {filtered.map((t_item: any) => (
               <tr key={t_item.id}>
                 <td style={{ textAlign: 'center' }}>
-                  <input type="checkbox" className="checkbox" />
+                  <input 
+                    type="checkbox" 
+                    className="checkbox" 
+                    checked={selectedIds.includes(t_item.id)}
+                    onChange={() => toggleSelect(t_item.id)}
+                  />
                 </td>
                 <td>
                   <div className="tx-cell">
@@ -291,10 +285,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
                   </div>
                 </td>
                 <td>
-                  <span className="badge gray" style={{ 
-                    background: t_item.categories?.color ? `${t_item.categories.color}20` : undefined, 
-                    color: t_item.categories?.color 
-                  }}>
+                  <span className="badge gray" style={{ background: t_item.categories?.color ? `${t_item.categories.color}20` : undefined, color: t_item.categories?.color }}>
                     {t_item.categories?.name || (locale === 'vi' ? 'Khác' : 'Other')}
                   </span>
                 </td>
@@ -313,12 +304,90 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
             ))}
           </tbody>
         </table>
+
+        {/* MOBILE LIST */}
+        <div className="block md:hidden">
+          {filtered.map((t_item: any) => {
+            const isSel = selectedIds.includes(t_item.id);
+            return (
+              <div key={t_item.id} onClick={() => toggleSelect(t_item.id)} style={{ padding: '16px 20px', borderBottom: '1px solid var(--line-2)', display: 'flex', gap: '14px', alignItems: 'center', background: isSel ? 'var(--color-purple-50)' : 'transparent', transition: 'background 0.2s' }}>
+                <div style={{ 
+                  width: '22px', 
+                  height: '22px', 
+                  borderRadius: '50%', 
+                  border: isSel ? '2px solid var(--color-purple-600)' : '2px solid var(--line-2)', 
+                  background: isSel ? 'var(--color-purple-600)' : 'transparent',
+                  flexShrink: 0, 
+                  display: 'grid',
+                  placeItems: 'center',
+                  transition: 'all 0.2s'
+                }}>
+                  {isSel && <Icon name="plus" size={12} style={{ color: '#fff', transform: 'rotate(45deg)' }} />}
+                </div>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: t_item.categories?.color + '15', color: t_item.categories?.color, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                  <Icon name={t_item.categories?.icon || 'list'} size={18} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {t_item.note || t_item.categories?.name}
+                    </div>
+                    <div className={t_item.type === 'expense' ? 'amt-spend' : 'amt-save'} style={{ fontWeight: 800, fontSize: '15px' }}>
+                      {t_item.type === 'expense' ? '-' : '+'}{Number(t_item.amount).toLocaleString()}đ
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--t3)', marginTop: '2px' }}>
+                    {new Date(t_item.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US')} · {t_item.categories?.name}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
         {filtered.length === 0 && (
           <div style={{ padding: '48px', textAlign: 'center', color: 'var(--t3)' }}>
             <Icon name="search" size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
             <p>{t('transactions.empty')}</p>
           </div>
         )}
+      </div>
+
+      {/* MOBILE CONTEXTUAL ACTION BAR */}
+      <div className={`md:hidden ${selectedIds.length > 0 ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'} pointer-events-auto`} 
+           style={{ 
+             position: 'fixed', 
+             bottom: '80px', 
+             left: '20px', 
+             right: '20px', 
+             background: 'var(--card)', 
+             borderRadius: '20px', 
+             padding: '12px 20px', 
+             boxShadow: '0 8px 32px rgba(0,0,0,0.15)', 
+             border: '1px solid var(--line-2)',
+             display: 'flex', 
+             alignItems: 'center', 
+             justifyContent: 'space-between',
+             zIndex: 100,
+             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+           }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => setSelectedIds([])} style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-2)', display: 'grid', placeItems: 'center', color: 'var(--t2)' }}>
+            <Icon name="x" size={16} />
+          </button>
+          <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--color-purple-700)' }}>{selectedIds.length} {t('common.selected')}</div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {selectedIds.length === 1 && (
+            <button className="btn btn-secondary btn-sm" onClick={handleEditSelected} style={{ borderRadius: '10px' }}>
+              <Icon name="edit" size={14} />
+              <span>Sửa</span>
+            </button>
+          )}
+          <button className="btn btn-danger btn-sm" onClick={handleDeleteSelected} style={{ borderRadius: '10px', background: 'var(--rose)', color: '#fff' }}>
+            <Icon name="trash" size={14} />
+            <span>Xoá</span>
+          </button>
+        </div>
       </div>
 
       {/* Custom Date Range Modal */}
