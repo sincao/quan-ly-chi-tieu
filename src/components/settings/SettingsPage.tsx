@@ -9,7 +9,7 @@ import { User } from '@supabase/supabase-js';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
-const SettingsPage: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogout }) => {
+const SettingsPage: React.FC<{ user: User; onLogout: () => void; onProfileUpdate?: () => void }> = ({ user, onLogout, onProfileUpdate }) => {
   const { locale, setLocale, t } = useLanguage();
   const [active, setActive] = useState('profile');
   const [budget, setBudget] = useState<number>(0);
@@ -20,6 +20,7 @@ const SettingsPage: React.FC<{ user: User; onLogout: () => void }> = ({ user, on
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,6 +88,10 @@ const SettingsPage: React.FC<{ user: User; onLogout: () => void }> = ({ user, on
   };
 
   const handleSaveProfile = async () => {
+    const fe: Record<string, string> = {};
+    if (tieugonId && !/^[a-z0-9_]+$/.test(tieugonId)) fe.tieugonId = t('validation.id_format');
+    if (Object.keys(fe).length > 0) { setFieldErrors(fe); return; }
+    setFieldErrors({});
     setLoading(true);
     setMessage(null);
     try {
@@ -99,13 +104,16 @@ const SettingsPage: React.FC<{ user: User; onLogout: () => void }> = ({ user, on
       });
       if (error) throw error;
       setMessage({ type: 'success', text: t('common.success') });
+      onProfileUpdate?.();
     } catch (err: any) {
-      if (err.code === '23505') setMessage({ type: 'error', text: 'ID already taken' });
+      if (err.code === '23505') setFieldErrors({ tieugonId: locale === 'vi' ? 'ID này đã được dùng.' : 'This ID is already taken.' });
       else setMessage({ type: 'error', text: t('common.error') });
     } finally { setLoading(false); }
   };
 
   const handleSaveBudget = async () => {
+    if (!budget || budget <= 0) { setFieldErrors({ budget: t('validation.amount_budget') }); return; }
+    setFieldErrors({});
     setLoading(true);
     setMessage(null);
     try {
@@ -162,7 +170,10 @@ const SettingsPage: React.FC<{ user: User; onLogout: () => void }> = ({ user, on
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
       setAvatarUrl(publicUrl);
-    } catch (err) { setMessage({ type: 'error', text: 'Upload failed' }); }
+    } catch (err) { 
+      console.error('Upload error:', err);
+      setMessage({ type: 'error', text: 'Upload failed' }); 
+    }
     finally { setLoading(false); }
   };
 
@@ -227,12 +238,17 @@ const SettingsPage: React.FC<{ user: User; onLogout: () => void }> = ({ user, on
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="field">
                   <label className="label">ID</label>
-                  <input 
-                    type="text" className="input" value={tieugonId} 
-                    onChange={e => setTieugonId(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} 
-                    placeholder="username" 
+                  <input
+                    type="text"
+                    className={`input${fieldErrors.tieugonId ? ' error' : ''}`}
+                    value={tieugonId}
+                    onChange={e => { setTieugonId(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')); if (fieldErrors.tieugonId) setFieldErrors(prev => ({ ...prev, tieugonId: '' })); }}
+                    placeholder="username"
                   />
-                  <p className="help">{t('settings.id_help')}</p>
+                  {fieldErrors.tieugonId
+                    ? <span className="field-error">⚠ {fieldErrors.tieugonId}</span>
+                    : <p className="help">{t('settings.id_help')}</p>
+                  }
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -270,16 +286,20 @@ const SettingsPage: React.FC<{ user: User; onLogout: () => void }> = ({ user, on
 
                 <div className="field" style={{ marginTop: 20 }}>
                   <label className="label">{t('settings.budget_label')} {new Date().getMonth() + 1}</label>
-                  <div className="amount-input">
-                    <input 
-                      type="text" value={budget.toLocaleString()} 
+                  <div className={`amount-input${fieldErrors.budget ? ' error' : ''}`}>
+                    <input
+                      type="text"
+                      value={budget.toLocaleString()}
                       onChange={e => {
                         const val = e.target.value.replace(/\D/g, '');
                         setBudget(val ? parseInt(val, 10) : 0);
+                        if (fieldErrors.budget) setFieldErrors(prev => ({ ...prev, budget: '' }));
                       }}
+                      placeholder="5,000,000"
                     />
                     <span className="unit">đ</span>
                   </div>
+                  {fieldErrors.budget && <span className="field-error">⚠ {fieldErrors.budget}</span>}
                 </div>
 
                 <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>

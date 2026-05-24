@@ -53,13 +53,45 @@ export async function addTransaction(transaction: {
     .from('transactions')
     .insert([transaction])
     .select();
-  
+
   if (error) {
     console.error('Add transaction failed:', error);
   }
   return { data, error };
 }
 
+export async function updateTransaction(id: string, updates: {
+  category_id?: string;
+  amount?: number;
+  type?: 'expense' | 'income';
+  date?: string;
+  note?: string;
+}) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .update(updates)
+    .eq('id', id)
+    .select();
+
+  if (error) {
+    console.error('Update transaction failed:', error);
+  }
+  return { data, error };
+}
+
+export async function deleteTransaction(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Delete transaction failed:', error);
+  }
+  return { error };
+}
 export async function createMonthlyBudget(userId: string, amount: number) {
   const supabase = createClient();
   
@@ -121,26 +153,54 @@ export async function updateProfile(userId: string, updates: { display_name?: st
 export async function getSquadData(userId: string) {
   const supabase = createClient();
 
-  const { data: campaigns } = await supabase
+  // 1. Lấy danh sách chiến dịch và thành viên
+  const { data: campaigns, error: campError } = await supabase
     .from('campaigns')
     .select('*, campaign_members(user_id, profiles(*))')
     .order('created_at', { ascending: false });
 
-  const { data: duels } = await supabase
+  if (campError) {
+    console.error('Error fetching campaigns:', campError);
+  }
+
+  // 2. Lấy stats tiết kiệm thời gian thực từ view (lấy hết hoặc filter theo user/camp nếu cần)
+  const { data: stats, error: statsError } = await supabase
+    .from('campaign_member_stats')
+    .select('*');
+  
+  if (statsError) {
+    console.error('Error fetching campaign stats:', statsError);
+  }
+
+  const { data: duels, error: duelError } = await supabase
     .from('duels')
     .select('*, creator:profiles!creator_id(*), opponent:profiles!opponent_id(*)')
     .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
     .order('created_at', { ascending: false });
 
+  if (duelError) {
+    console.error('Error fetching duels:', duelError);
+  }
+
   return { 
-    campaigns: campaigns?.map(c => ({
-      ...c,
-      current: Number(c.current_amount),
-      daily_savings: Number(c.daily_savings || (c as any).target_amount || 0),
-      members: (c as any).campaign_members || [],
-      isJoined: (c as any).campaign_members?.some((m: any) => m.user_id === userId),
-      daysLeft: Math.max(0, Math.ceil((new Date(c.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    })) || [],
+    campaigns: campaigns?.map(c => {
+      const membersWithStats = (c as any).campaign_members?.map((m: any) => {
+        const s = stats?.find(st => st.campaign_id === c.id && st.user_id === m.user_id);
+        return {
+          ...m,
+          current_savings: s ? [{ current_savings: s.current_savings }] : []
+        };
+      }) || [];
+
+      return {
+        ...c,
+        current: Number(c.current_amount),
+        daily_savings: Number(c.daily_savings || (c as any).target_amount || 0),
+        members: membersWithStats,
+        isJoined: (c as any).campaign_members?.some((m: any) => m.user_id === userId),
+        daysLeft: Math.max(0, Math.ceil((new Date(c.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      };
+    }) || [],
     duels: duels?.map(d => ({
       ...d,
       creator_score: Number(d.creator_score || 0),

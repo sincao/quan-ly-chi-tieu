@@ -24,6 +24,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ open, onClose, userId
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanPreview, setScanPreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,7 +37,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ open, onClose, userId
         if (data.length > 0 && !catId) setCatId(data[0].id);
       }
     }
-    if (open) fetchCats();
+    if (open) { fetchCats(); setErrors({}); }
   }, [open, supabase, catId]);
 
   if (!open) return null;
@@ -58,8 +59,17 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ open, onClose, userId
     }, 2500);
   };
 
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!amount || amount <= 0) e.amount = t('validation.amount_positive');
+    if (!catId) e.catId = t('validation.required');
+    if (!date) e.date = t('validation.required');
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
   const handleSave = async () => {
-    if (amount <= 0 || !catId) return;
+    if (!validate()) return;
     setLoading(true);
     try {
       const { error } = await addTransaction({ user_id: userId, category_id: catId, amount, type: 'expense', date: new Date(date).toISOString(), note });
@@ -68,8 +78,12 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ open, onClose, userId
       onClose();
       setAmount(0);
       setNote('');
-    } catch (err) { alert('Error saving'); }
-    finally { setLoading(false); }
+      setErrors({});
+    } catch (err) {
+      alert(t('common.error'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -88,25 +102,46 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ open, onClose, userId
 
           <div className="field" style={{ marginBottom: '20px' }}>
             <label className="label">{t('transactions.date')}</label>
-            <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
+            <input
+              type="date"
+              className={`input${errors.date ? ' error' : ''}`}
+              value={date}
+              onChange={e => { setDate(e.target.value); if (errors.date) setErrors(prev => ({ ...prev, date: '' })); }}
+            />
+            {errors.date && <span className="field-error">⚠ {errors.date}</span>}
           </div>
 
           {mode === 'manual' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="field">
                 <label className="label">{t('transactions.amount')}</label>
-                <div className="amount-input">
-                  <input type="text" value={amount || ''} onChange={e => setAmount(Number(e.target.value.replace(/\D/g, '')))} placeholder="0" autoFocus />
+                <div className={`amount-input${errors.amount ? ' error' : ''}`}>
+                  <input
+                    type="text"
+                    value={amount || ''}
+                    onChange={e => { setAmount(Number(e.target.value.replace(/\D/g, ''))); if (errors.amount) setErrors(prev => ({ ...prev, amount: '' })); }}
+                    placeholder="0"
+                    autoFocus
+                  />
                   <span className="unit">đ</span>
                 </div>
+                {errors.amount && <span className="field-error">⚠ {errors.amount}</span>}
               </div>
               <div className="field">
                 <label className="label">{t('transactions.category')}</label>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {categories.map(c => (
-                    <button key={c.id} className={`chip ${catId === c.id ? 'active' : ''}`} onClick={() => setCatId(c.id)} type="button"><span>{c.name}</span></button>
+                    <button
+                      key={c.id}
+                      className={`chip ${catId === c.id ? 'active' : ''}`}
+                      onClick={() => { setCatId(c.id); if (errors.catId) setErrors(prev => ({ ...prev, catId: '' })); }}
+                      type="button"
+                    >
+                      <span>{c.name}</span>
+                    </button>
                   ))}
                 </div>
+                {errors.catId && <span className="field-error">⚠ {errors.catId}</span>}
               </div>
               <div className="field">
                 <label className="label">{t('transactions.note')}</label>
@@ -117,8 +152,8 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ open, onClose, userId
             <div className="dropzone" style={{ border: '2px dashed var(--line-2)', borderRadius: '12px', padding: '40px 20px', textAlign: 'center', background: 'var(--bg-2)' }}>
               {isScanning ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '3px solid var(--purple-200)', borderTopColor: 'var(--purple-600)', animation: 'spin 1s linear infinite' }} />
-                   <p>{t('common.loading')}</p>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '3px solid var(--purple-200)', borderTopColor: 'var(--purple-600)', animation: 'spin 1s linear infinite' }} />
+                  <p>{t('common.loading')}</p>
                 </div>
               ) : (
                 <>

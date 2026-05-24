@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '@/components/ui/Icon';
 import { createClient } from '@/lib/supabase/client';
-import { getDashboardData } from '@/lib/supabase/queries';
+import { getDashboardData, deleteTransaction, updateTransaction } from '@/lib/supabase/queries';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format } from 'date-fns';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 interface TransactionsPageProps {
   onAdd: () => void;
@@ -27,6 +28,21 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [localRefresh, setLocalRefresh] = useState(0);
+
+  const [confirm, setConfirm] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: 'primary' | 'danger';
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'primary'
+  });
 
   const supabase = createClient();
 
@@ -40,10 +56,57 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
       setLoading(false);
     }
     loadData();
-  }, [refreshKey]);
+  }, [refreshKey, localRefresh]);
 
   const transactions = data?.transactions || [];
   const categories = data?.allCategories || [];
+
+  const handleDelete = (id: string) => {
+    setConfirm({
+      open: true,
+      title: t('transactions.confirm_delete_title'),
+      message: t('transactions.confirm_delete_msg'),
+      type: 'danger',
+      onConfirm: async () => {
+        const { error } = await deleteTransaction(id);
+        if (!error) {
+          setLocalRefresh(prev => prev + 1);
+        }
+        setConfirm(c => ({ ...c, open: false }));
+      }
+    });
+  };
+
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+  const handleEdit = (t_item: any) => {
+    setEditingTransaction({
+      ...t_item,
+      date: t_item.date.split('T')[0]
+    });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingTransaction) return;
+    const errs: Record<string, string> = {};
+    if (!editingTransaction.amount || editingTransaction.amount <= 0) errs.amount = t('validation.amount_positive');
+    if (!editingTransaction.date) errs.date = t('validation.required');
+    if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
+    setEditErrors({});
+    const { id, category_id, amount, type, date, note } = editingTransaction;
+    const { error } = await updateTransaction(id, {
+      category_id,
+      amount,
+      type,
+      date: new Date(date).toISOString(),
+      note
+    });
+    if (!error) {
+      setLocalRefresh(prev => prev + 1);
+      setEditingTransaction(null);
+    }
+  };
 
   const filtered = transactions.filter((t: any) => {
     const note = t.note || '';
@@ -110,10 +173,10 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
     const headers = locale === 'vi' ? ['Ngày', 'Tên/Ghi chú', 'Danh mục', 'Số tiền', 'Loại'] : ['Date', 'Note', 'Category', 'Amount', 'Type'];
     const rows = filtered.map((t: any) => [
       new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US'),
-      t.note || t.categories?.name || (locale === 'vi' ? 'Chi tiêu' : 'Expense'),
-      t.categories?.name || (locale === 'vi' ? 'Khác' : 'Other'),
+      t.note || t.categories?.name || t('transactions.expense'),
+      t.categories?.name || t('transactions.other'),
       t.amount,
-      t.type === 'expense' ? (locale === 'vi' ? 'Chi tiêu' : 'Expense') : (locale === 'vi' ? 'Thu nhập' : 'Income')
+      t.type === 'expense' ? t('transactions.expense') : t('transactions.income')
     ]);
     const csvContent = [headers.join(','), ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(','))].join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -242,8 +305,8 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
                 <td style={{ color: 'var(--t3)', fontSize: '12px' }}>{t_item.note}</td>
                 <td>
                   <div className="tbl-actions">
-                    <button className="icon-btn sm"><Icon name="edit" size={14} /></button>
-                    <button className="icon-btn sm"><Icon name="trash" size={14} /></button>
+                    <button className="icon-btn sm" onClick={() => handleEdit(t_item)}><Icon name="edit" size={14} /></button>
+                    <button className="icon-btn sm" onClick={() => handleDelete(t_item.id)}><Icon name="trash" size={14} /></button>
                   </div>
                 </td>
               </tr>
@@ -283,6 +346,98 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ onAdd, refreshKey =
           </div>
         </div>
       )}
+
+      {/* Edit Transaction Modal */}
+      {editingTransaction && (
+        <div className="scrim" onClick={() => setEditingTransaction(null)}>
+          <div className="modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>{t('transactions.edit_title')}</h3>
+              <button className="close" onClick={() => setEditingTransaction(null)}><Icon name="x" size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+              <div className="seg" style={{ display: 'flex', width: '100%' }}>
+                <button 
+                  className={editingTransaction.type === 'expense' ? 'active' : ''} 
+                  onClick={() => setEditingTransaction({...editingTransaction, type: 'expense'})}
+                  style={{ flex: 1 }}
+                >
+                  {t('transactions.expense')}
+                </button>
+                <button 
+                  className={editingTransaction.type === 'income' ? 'active' : ''} 
+                  onClick={() => setEditingTransaction({...editingTransaction, type: 'income'})}
+                  style={{ flex: 1 }}
+                >
+                  {t('transactions.income')}
+                </button>
+              </div>
+
+              <div className="field">
+                <label className="label">{t('transactions.amount')}</label>
+                <div className={`amount-input${editErrors.amount ? ' error' : ''}`}>
+                  <input
+                    type="text"
+                    value={editingTransaction.amount ? Number(editingTransaction.amount).toLocaleString() : ''}
+                    onChange={e => { setEditingTransaction({...editingTransaction, amount: Number(e.target.value.replace(/\D/g, ''))}); if (editErrors.amount) setEditErrors(prev => ({ ...prev, amount: '' })); }}
+                    placeholder="0"
+                  />
+                  <span className="unit">đ</span>
+                </div>
+                {editErrors.amount && <span className="field-error">⚠ {editErrors.amount}</span>}
+              </div>
+
+              <div className="field">
+                <label className="label">{t('transactions.category')}</label>
+                <select 
+                  className="select" 
+                  value={editingTransaction.category_id} 
+                  onChange={e => setEditingTransaction({...editingTransaction, category_id: e.target.value})}
+                >
+                  {categories.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label className="label">{t('transactions.date')}</label>
+                <input
+                  type="date"
+                  className={`input${editErrors.date ? ' error' : ''}`}
+                  value={editingTransaction.date}
+                  onChange={e => { setEditingTransaction({...editingTransaction, date: e.target.value}); if (editErrors.date) setEditErrors(prev => ({ ...prev, date: '' })); }}
+                />
+                {editErrors.date && <span className="field-error">⚠ {editErrors.date}</span>}
+              </div>
+
+              <div className="field">
+                <label className="label">{t('transactions.note')}</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={editingTransaction.note}
+                  onChange={e => setEditingTransaction({...editingTransaction, note: e.target.value})}
+                  placeholder="..."
+                />
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={() => setEditingTransaction(null)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleUpdate}>{t('common.save') || 'Lưu thay đổi'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal 
+        open={confirm.open}
+        title={confirm.title}
+        message={confirm.message}
+        onConfirm={confirm.onConfirm}
+        onClose={() => setConfirm(c => ({ ...c, open: false }))}
+        type={confirm.type}
+      />
     </div>
   );
 };

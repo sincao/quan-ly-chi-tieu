@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '@/components/ui/Icon';
 import { createMonthlyBudget } from '@/lib/supabase/queries';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface EditBudgetModalProps {
   open: boolean;
@@ -13,12 +14,14 @@ interface EditBudgetModalProps {
 }
 
 const EditBudgetModal: React.FC<EditBudgetModalProps> = ({ open, onClose, userId, currentAmount, onSuccess }) => {
+  const { t } = useLanguage();
   const [amount, setAmount] = useState(currentAmount || 5000000);
   const [loading, setLoading] = useState(false);
+  const [amountError, setAmountError] = useState('');
   const presets = [3000000, 5000000, 8000000, 10000000];
 
   useEffect(() => {
-    if (open) setAmount(currentAmount || 5000000);
+    if (open) { setAmount(currentAmount || 5000000); setAmountError(''); }
   }, [open, currentAmount]);
 
   if (!open) return null;
@@ -26,6 +29,7 @@ const EditBudgetModal: React.FC<EditBudgetModalProps> = ({ open, onClose, userId
   const fmt = (v: number) => v.toLocaleString();
 
   const handleSave = async () => {
+    if (!amount || amount <= 0) { setAmountError(t('validation.amount_budget')); return; }
     setLoading(true);
     try {
       await createMonthlyBudget(userId, amount);
@@ -42,18 +46,18 @@ const EditBudgetModal: React.FC<EditBudgetModalProps> = ({ open, onClose, userId
     <div className="scrim" onClick={onClose}>
       <div className="modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>Chỉnh sửa ngân sách</h3>
+          <h3>{t('budget.edit_title')}</h3>
           <button className="close" onClick={onClose}><Icon name="x" size={20} /></button>
         </div>
 
         <div className="modal-body" style={{ padding: '24px' }}>
           <p style={{ fontSize: '13px', color: 'var(--t2)', marginBottom: '20px' }}>
-            Thiết lập hạn mức chi tiêu để app có thể phán xét bạn chính xác hơn 🙂
+            {t('budget.edit_desc')}
           </p>
 
           <div className="field">
-            <label className="label">Ngân sách tháng này</label>
-            <div className="amount-input">
+            <label className="label">{t('budget.month_label')}</label>
+            <div className={`amount-input${amountError ? ' error' : ''}`}>
               <input
                 type="text"
                 value={amount ? fmt(amount) : ''}
@@ -62,20 +66,22 @@ const EditBudgetModal: React.FC<EditBudgetModalProps> = ({ open, onClose, userId
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '');
                   setAmount(val ? parseInt(val, 10) : 0);
+                  if (amountError) setAmountError('');
                 }}
               />
               <span className="unit">đ</span>
             </div>
+            {amountError && <span className="field-error">⚠ {amountError}</span>}
           </div>
 
           <div style={{ marginTop: 20 }}>
-            <div className="label" style={{ marginBottom: 10 }}>Chọn nhanh</div>
+            <div className="label" style={{ marginBottom: 10 }}>{t('budget.quick_select')}</div>
             <div className="onboard-presets" style={{ gridTemplateColumns: '1fr 1fr' }}>
               {presets.map(p => (
-                <button 
-                  key={p} 
-                  className={'preset' + (amount === p ? ' active' : '')} 
-                  onClick={() => setAmount(p)}
+                <button
+                  key={p}
+                  className={'preset' + (amount === p ? ' active' : '')}
+                  onClick={() => { setAmount(p); setAmountError(''); }}
                   style={{ padding: '12px' }}
                 >
                   <span>{fmt(p)}đ</span>
@@ -86,9 +92,9 @@ const EditBudgetModal: React.FC<EditBudgetModalProps> = ({ open, onClose, userId
         </div>
 
         <div className="modal-foot">
-          <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
           <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
-            {loading ? 'Đang lưu...' : 'Cập nhật ngân sách'}
+            {loading ? t('common.saving') : t('budget.update')}
           </button>
         </div>
       </div>

@@ -10,8 +10,10 @@ import SquadPage from '@/components/squad/SquadPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 import LoginScreen from '@/components/auth/LoginScreen';
 import Onboarding from '@/components/auth/Onboarding';
+import UpdatePasswordScreen from '@/components/auth/UpdatePasswordScreen';
 import AddExpenseModal from '@/components/dashboard/AddExpenseModal';
 import EditBudgetModal from '@/components/dashboard/EditBudgetModal';
+import Icon from '@/components/ui/Icon';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { getDashboardData, getSquadData } from '@/lib/supabase/queries';
@@ -25,6 +27,7 @@ export default function Home() {
   const [isAddOpen, setAddOpen] = useState(false);
   const [isBudgetOpen, setBudgetOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [counts, setCounts] = useState<{ [key: string]: number }>({});
 
   const supabase = createClient();
@@ -42,21 +45,37 @@ export default function Home() {
     }
 
     const checkUser = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isVerified = urlParams.get('verified') === 'true';
+      const isRecovery = urlParams.get('mode') === 'recovery';
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         setRoute('login');
         setUser(null);
       } else {
         setUser(session.user);
-        const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
-        if (!hasSeenOnboarding) setRoute('onboarding');
-        else setRoute('dashboard');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        if (isRecovery) {
+          setRoute('update_password');
+        } else if (isVerified) {
+          setRoute('verified_success');
+        } else {
+          const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
+          if (!hasSeenOnboarding) setRoute('onboarding');
+          else setRoute('dashboard');
+        }
         fetchCounts(session.user.id);
       }
     };
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        if (session) setUser(session.user);
+        setRoute('update_password');
+        return;
+      }
       if (!session) {
         setRoute('login');
         setUser(null);
@@ -79,6 +98,51 @@ export default function Home() {
   if (route === null) return <div style={{ height: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>Loading...</div>;
 
   if (route === 'login') return <LoginScreen onLogin={() => setRefreshKey(prev => prev + 1)} />;
+  
+  if (route === 'verified_success') {
+    return (
+      <div style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        background: 'var(--bg)',
+        textAlign: 'center',
+        padding: '20px'
+      }}>
+        <div style={{ 
+          background: 'rgba(34, 197, 94, 0.1)', 
+          color: '#22c55e', 
+          width: '64px', 
+          height: '64px', 
+          borderRadius: '50%', 
+          display: 'grid', 
+          placeItems: 'center',
+          marginBottom: '24px'
+        }}>
+          <Icon name="check" size={32} />
+        </div>
+        <h1 style={{ marginBottom: '12px', fontSize: '24px', fontWeight: 800 }}>Xác minh thành công!</h1>
+        <p style={{ color: 'var(--t2)', maxWidth: '400px', marginBottom: '32px', lineHeight: 1.5 }}>
+          Tài khoản của bạn đã được kích hoạt. Hãy bắt đầu hành trình quản lý chi tiêu thông minh ngay bây giờ.
+        </p>
+        <button 
+          className="btn btn-primary" 
+          onClick={() => {
+            const hasSeenOnboarding = localStorage.getItem(`onboarding_${user?.id}`);
+            setRoute(hasSeenOnboarding ? 'dashboard' : 'onboarding');
+          }}
+          style={{ minWidth: '200px', height: '48px' }}
+        >
+          Bắt đầu ngay
+        </button>
+      </div>
+    );
+  }
+
+  if (route === 'update_password') return <UpdatePasswordScreen onDone={() => setRoute('dashboard')} />;
+
   if (route === 'onboarding') return user ? <Onboarding userId={user.id} onComplete={() => setRoute('dashboard')} /> : null;
 
   const renderContent = () => {
@@ -95,7 +159,7 @@ export default function Home() {
       case 'squad-members':
         return user ? <SquadPage user={user} subRoute={route === 'squad' || route === 'squad-campaigns' ? 'campaigns' : route === 'squad-duels' ? 'duels' : 'members'} /> : null;
       case 'settings':
-        return user ? <SettingsPage user={user} onLogout={() => setRoute('login')} /> : null;
+        return user ? <SettingsPage user={user} onLogout={() => setRoute('login')} onProfileUpdate={() => setProfileRefreshKey(k => k + 1)} /> : null;
       default:
         return user ? <Dashboard user={user} onAdd={() => setAddOpen(true)} onEditBudget={() => setBudgetOpen(true)} onSeeAll={() => setRoute('transactions')} /> : null;
     }
@@ -124,13 +188,14 @@ export default function Home() {
   return (
     <div className="app-container">
       <div className={`sidebar-area ${isSidebarOpen ? 'open' : ''}`}>
-        <Sidebar 
-          currentRoute={route} 
-          setRoute={(r) => { setRoute(r); setSidebarOpen(false); }} 
+        <Sidebar
+          currentRoute={route}
+          setRoute={(r) => { setRoute(r); setSidebarOpen(false); }}
           open={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
           user={user}
           counts={counts}
+          profileRefreshKey={profileRefreshKey}
         />
       </div>
       {isSidebarOpen && <div className="sidebar-scrim" onClick={() => setSidebarOpen(false)}></div>}

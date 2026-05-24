@@ -12,9 +12,10 @@ interface SidebarProps {
   onClose?: () => void;
   user: User | null;
   counts?: { [key: string]: number };
+  profileRefreshKey?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose, user, counts }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose, user, counts, profileRefreshKey }) => {
   const { t } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['squad']);
@@ -26,13 +27,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
       if (!user) return;
       const { data } = await supabase
         .from('profiles')
-        .select('first_name, last_name, display_name')
+        .select('first_name, last_name, display_name, avatar_url')
         .eq('id', user.id)
         .single();
       if (data) setProfile(data);
     }
     loadProfile();
-  }, [user, supabase]);
+  }, [user, profileRefreshKey]);
 
   useEffect(() => {
     if (currentRoute?.startsWith('squad')) {
@@ -127,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
         </div>
       </div>
 
-      <div className="sb-group-label" style={{ paddingLeft: '16px' }}>Workspace</div>
+      <div className="sb-group-label" style={{ paddingLeft: '16px' }}>{t('nav.workspace')}</div>
       <nav className="sb-nav" style={{ padding: 0 }}>
         {NAV_MAIN.map(item => <NavItem item={item} key={item.id} />)}
       </nav>
@@ -140,7 +141,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
 
       <div className="sb-foot" style={{ padding: '16px' }}>
         <div className="sb-foot-user">
-          <div className="avatar" style={{ background: '#6938E8', color: '#fff' }}>{getInitials()}</div>
+          <div className="avatar" style={{ background: '#6938E8', color: '#fff', overflow: 'hidden' }}>
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : getInitials()}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="nm truncate">{displayName}</div>
             <div className="em truncate">{userEmail}</div>

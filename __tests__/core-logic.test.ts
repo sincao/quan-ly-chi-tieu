@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { calculateDailySafeSpend, calculateBurnRate, getFinancialStatus } from '../lib/finance/calculations'
-import { generateEmotionalReaction } from '../lib/engine/emotionalEngine'
-import { calculateLevel, checkStreakStatus } from '../lib/gamification/engine'
+import { calculateDailySafeSpend, calculateBurnRate, getFinancialStatus } from '../src/lib/finance/calculations'
+import { generateEmotionalReaction } from '../src/lib/engine/emotionalEngine'
+import { calculateLevel, checkStreakStatus } from '../src/lib/gamification/engine'
 
 describe('Finance Logic', () => {
   it('should calculate correct daily safe spend', () => {

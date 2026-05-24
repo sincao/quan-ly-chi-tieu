@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Icon, { IconName } from '@/components/ui/Icon';
 import { getDashboardData } from '@/lib/supabase/queries';
 import { User } from '@supabase/supabase-js';
@@ -24,11 +24,27 @@ const Kpi: React.FC<any> = ({ primary, label, value, unit, delta, deltaDir, meta
       </div>
       {onAction && (
         <button 
-          onClick={(e) => { e.stopPropagation(); onAction(); }} 
-          className="hover:bg-white/20 transition-all" 
-          style={{ opacity: 1, padding: '4px', cursor: 'pointer', borderRadius: '4px', background: 'rgba(255,255,255,0.2)' }}
+          type="button"
+          onClick={() => onAction()} 
+          className="hover:scale-110 active:scale-95 transition-all" 
+          style={{ 
+            opacity: 1, 
+            padding: '6px', 
+            cursor: 'pointer', 
+            borderRadius: '6px', 
+            background: primary ? 'rgba(255,255,255,0.3)' : 'rgba(105, 56, 232, 0.15)',
+            color: primary ? '#fff' : 'var(--purple-700)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            position: 'relative',
+            zIndex: 10
+          }}
+          title="Edit"
         >
-          <Icon name="edit" size={12} />
+          <Icon name="edit" size={13} />
         </button>
       )}
     </div>
@@ -44,6 +60,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
   const [loading, setLoading] = useState(true);
   const [statsPeriod, setStatsPeriod] = useState<'month' | '3months' | 'year'>('month');
   const [dailyPeriod, setDailyPeriod] = useState<'week' | 'month'>('week');
+  const dailyScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -53,6 +70,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
     }
     loadData();
   }, [user.id]);
+
+  useEffect(() => {
+    if (dailyPeriod === 'month' && dailyScrollRef.current) {
+      const todayIndex = new Date().getDate() - 1;
+      const barWidth = 30;
+      const scrollTo = Math.max(0, todayIndex * barWidth - dailyScrollRef.current.clientWidth / 2);
+      dailyScrollRef.current.scrollLeft = scrollTo;
+    }
+  }, [dailyPeriod]);
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>{t('common.loading')}</div>;
 
@@ -82,7 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
 
   // Bug 4 Fix: Allow negative budget
   const remainingBudget = budgetLimit - totalSpentKPI;
-  const savedValue = totalIncomeKPI - totalSpentKPI; // Allowing negative here too if they spent more than earned
+  const savedValue = Math.max(0, totalIncomeKPI - totalSpentKPI); 
   const pctSpent = budgetLimit > 0 ? Math.round((totalSpentKPI / budgetLimit) * 100) : 0;
   const daysLeft = 30 - new Date().getDate();
   
@@ -114,14 +140,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
         result.push({ label: days[d.getDay()], total: dayTotal, segments, isToday: d.toDateString() === now.toDateString() });
       }
     } else {
-      for (let i = 13; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(now.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        const d = new Date(year, month, i);
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const dayTrans = allTransactions.filter((t: any) => t.date.split('T')[0] === dateStr && t.type === 'expense');
         const dayTotal = dayTrans.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
         const segments = categories.map((c: any) => ({ color: c.color, amount: dayTrans.filter((t: any) => t.category_id === c.id).reduce((sum: number, t: any) => sum + Number(t.amount), 0) })).filter((s: any) => s.amount > 0);
-        result.push({ label: d.getDate().toString(), total: dayTotal, segments, isToday: i === 0 });
+        result.push({ label: i.toString(), total: dayTotal, segments, isToday: d.toDateString() === now.toDateString() });
       }
     }
     return result;
@@ -157,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
       <div className="page-head">
         <div>
           <h1>{t('nav.dashboard')}</h1>
-          <p className="sub">Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()} · còn <b>{daysLeft} {t('dashboard.days_left')}</b> · {t('dashboard.used_budget')} <b>{pctSpent}%</b></p>
+          <p className="sub">{t('dashboard.month_prefix')} {new Date().getMonth() + 1}/{new Date().getFullYear()} · <b>{daysLeft} {t('dashboard.days_left')}</b> · {t('dashboard.used_budget')} <b>{pctSpent}%</b></p>
         </div>
         <div className="page-head-actions">
           <button className="btn btn-outline btn-sm" onClick={handleExport}><Icon name="download" size={14} /><span>{t('dashboard.export_report')}</span></button>
@@ -178,56 +206,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
           <div className="roast-label">{t('dashboard.roast_title')}</div>
           <div className="roast-text">
             {remainingBudget < 0
-              ? (locale === 'vi' ? "Bạn đã tiêu quá lố rồi! Dừng lại ngay! 🛑" : "You have overspent! Stop now! 🛑")
+              ? t('dashboard.roast_over')
               : remainingBudget < budgetLimit * 0.2 && budgetLimit > 0
-                ? (locale === 'vi' ? "Bạn sắp cháy túi rồi đấy! 🛑" : "You are about to burn out your wallet! 🛑")
-                : (locale === 'vi' ? "Tình hình tài chính vẫn ổn. ☕️" : "Financial status is still okay. ☕️")}
+                ? t('dashboard.roast_low')
+                : t('dashboard.roast_ok')}
           </div>
         </div>
       </div>
 
-      <div className="card flush" style={{ marginBottom: '22px' }}>
-        <div className="card-h">
-          <div>
-            <h3>{t('dashboard.daily_spent')}</h3>
-            <div className="sub"><b>{avgSpend.toLocaleString()}đ</b> / day</div>
-          </div>
-          <div className="seg">
-            <button className={dailyPeriod === 'week' ? 'active' : ''} onClick={() => setDailyPeriod('week')}>{locale === 'vi' ? 'Tuần' : 'Week'}</button>
-            <button className={dailyPeriod === 'month' ? 'active' : ''} onClick={() => setDailyPeriod('month')}>{locale === 'vi' ? 'Tháng' : 'Month'}</button>
-          </div>
-        </div>
-        <div className="card-body" style={{ padding: '24px 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '140px' }}>
-            {dailyData.map((d, i) => {
-              const maxDay = Math.max(...dailyData.map(x => x.total), 1);
-              const heightPct = (d.total / maxDay) * 100;
-              return (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: '6px', alignItems: 'center' }}>
-                  <div style={{ fontSize: '10px', color: 'var(--t3)', whiteSpace: 'nowrap' }}>{d.total > 0 ? Number(d.total).toLocaleString() + 'đ' : ''}</div>
-                  <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', background: 'var(--bg-2)' }}>
-                    {d.segments.map((s: any, si: number) => (
-                      <div key={si} style={{ width: '100%', height: `${(s.amount / d.total) * 100}%`, background: s.color }} />
-                    ))}
-                    <div style={{ width: '100%', height: `${100 - heightPct}%` }} />
-                  </div>
-                  <div style={{ fontSize: '9px', textAlign: 'center', color: d.isToday ? 'var(--purple-700)' : 'var(--t3)', fontWeight: d.isToday ? 800 : 500 }}>{d.label}</div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', borderTop: '1px solid var(--line-2)', paddingTop: '16px' }}>
-            {data.allCategories?.filter((c: any) => c.type === 'expense').slice(0, 6).map((c: any) => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c.color }} />
-                <span style={{ fontSize: '11px', color: 'var(--t2)', fontWeight: 600 }}>{c.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="dash-row r-1-1">
+      <div className="dash-row r-1-1" style={{ marginBottom: '22px' }}>
+        {/* Tiền tiêu vào đâu */}
         <div className="card flush">
           <div className="card-h">
             <div>
@@ -235,9 +223,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
               <div className="sub">{t('transactions.category')} breakdown</div>
             </div>
             <div className="seg">
-              <button className={statsPeriod === 'month' ? 'active' : ''} onClick={() => setStatsPeriod('month')}>{locale === 'vi' ? 'Tháng này' : 'Month'}</button>
-              <button className={statsPeriod === '3months' ? 'active' : ''} onClick={() => setStatsPeriod('3months')}>{locale === 'vi' ? '3 tháng' : '3M'}</button>
-              <button className={statsPeriod === 'year' ? 'active' : ''} onClick={() => setStatsPeriod('year')}>{locale === 'vi' ? 'Năm' : 'Year'}</button>
+              <button className={statsPeriod === 'month' ? 'active' : ''} onClick={() => setStatsPeriod('month')}>{t('dashboard.this_month')}</button>
+              <button className={statsPeriod === '3months' ? 'active' : ''} onClick={() => setStatsPeriod('3months')}>{t('dashboard.three_months')}</button>
+              <button className={statsPeriod === 'year' ? 'active' : ''} onClick={() => setStatsPeriod('year')}>{t('dashboard.year')}</button>
             </div>
           </div>
           <div className="card-body" style={{ padding: '32px' }}>
@@ -253,7 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
                   <div className="donut-center"><div className="v" style={{ fontSize: '15px' }}>{totalSpentStats >= 1000000 ? (totalSpentStats/1000000).toFixed(1) + 'M' : (totalSpentStats/1000).toLocaleString() + 'k'}</div></div>
                 </div>
                 <div className="legend">
-                  {catStats.slice(0, 4).map((c: any) => (
+                  {catStats.slice(0, 5).map((c: any) => (
                     <div key={c.id} className="legend-row" style={{ fontSize: '11px' }}>
                       <div className="sw" style={{ background: c.color || 'var(--purple-500)', width: '8px', height: '8px' }}></div>
                       <div className="nm">{c.name}</div>
@@ -266,36 +254,99 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
           </div>
         </div>
 
+        {/* Chi theo ngày */}
         <div className="card flush">
           <div className="card-h">
             <div>
-              <h3>{t('dashboard.recent')}</h3>
-              <div className="sub">Your latest transactions</div>
+              <h3>{t('dashboard.daily_spent')}</h3>
+              <div className="sub"><b>{avgSpend.toLocaleString()}đ</b> / {t('common.days')}</div>
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={onSeeAll}>{locale === 'vi' ? 'Xem tất cả' : 'See all'}</button>
+            <div className="seg">
+              <button className={dailyPeriod === 'week' ? 'active' : ''} onClick={() => setDailyPeriod('week')}>{t('dashboard.week')}</button>
+              <button className={dailyPeriod === 'month' ? 'active' : ''} onClick={() => setDailyPeriod('month')}>{t('dashboard.month')}</button>
+            </div>
           </div>
-          <div className="card-body tight">
-            <table className="tbl">
-              <tbody>
-                {allTransactions.slice(0, 8).map((t: any) => (
-                  <tr key={t.id}>
-                    <td>
-                      <div className="tx-cell">
-                        <div className={`tx-cat-ico ${t.categories?.icon || 'other'}`} style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}><Icon name={(t.categories?.icon as any) || 'list'} size={14} /></div>
-                        <div>
-                          <div className="tx-name">{t.note || t.categories?.name || 'Expense'}</div>
-                          <div className="tx-note">{new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US')}</div>
-                        </div>
+          <div className="card-body" style={{ padding: '20px 20px 16px' }}>
+            <div
+              ref={dailyScrollRef}
+              style={{
+                overflowX: 'auto',
+                overflowY: 'visible',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'thin',
+                paddingBottom: '4px',
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: dailyPeriod === 'month' ? '3px' : '6px',
+                height: '120px',
+                minWidth: dailyPeriod === 'month' ? `${dailyData.length * 30}px` : undefined,
+              }}>
+                {dailyData.map((d, i) => {
+                  const maxDay = Math.max(...dailyData.map((x: any) => x.total), 1);
+                  const heightPct = (d.total / maxDay) * 100;
+                  const barW = dailyPeriod === 'month' ? '26px' : undefined;
+                  return (
+                    <div key={i} style={{ flex: dailyPeriod === 'week' ? 1 : '0 0 26px', display: 'flex', flexDirection: 'column', height: '100%', gap: '4px', alignItems: 'center' }}>
+                      {dailyPeriod === 'week' && (
+                        <div style={{ fontSize: '9px', color: 'var(--t3)', whiteSpace: 'nowrap', height: '14px' }}>{d.total > 0 ? Number(d.total).toLocaleString() + 'đ' : ''}</div>
+                      )}
+                      <div style={{ flex: 1, width: barW ?? '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', background: 'var(--bg-2)' }}>
+                        {d.segments.map((s: any, si: number) => (
+                          <div key={si} style={{ width: '100%', height: `${(s.amount / d.total) * 100}%`, background: s.color }} />
+                        ))}
+                        <div style={{ width: '100%', height: `${100 - heightPct}%` }} />
                       </div>
-                    </td>
-                    <td><span className="badge gray" style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}>{t.categories?.name || 'Other'}</span></td>
-                    <td className="num"><span className={t.type === 'expense' ? 'amt-spend' : 'amt-save'} style={{ fontWeight: 700, fontSize: '14px' }}>{t.type === 'expense' ? '-' : '+'}{Number(t.amount).toLocaleString()}đ</span></td>
-                  </tr>
-                ))}
-                {allTransactions.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--t3)' }}>No transactions.</td></tr>}
-              </tbody>
-            </table>
+                      <div style={{ fontSize: '9px', textAlign: 'center', color: d.isToday ? 'var(--purple-700)' : 'var(--t3)', fontWeight: d.isToday ? 800 : 400, lineHeight: 1 }}>{d.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', borderTop: '1px solid var(--line-2)', paddingTop: '12px', marginTop: '8px' }}>
+              {data.allCategories?.filter((c: any) => c.type === 'expense').slice(0, 5).map((c: any) => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: c.color }} />
+                  <span style={{ fontSize: '10px', color: 'var(--t2)', fontWeight: 600 }}>{c.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Lịch sử chi tiêu */}
+      <div className="card flush" style={{ marginBottom: '22px' }}>
+        <div className="card-h">
+          <div>
+            <h3>{t('dashboard.recent')}</h3>
+            <div className="sub">{t('dashboard.this_month')}</div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={onSeeAll}>{t('dashboard.see_all')}</button>
+        </div>
+        <div className="card-body tight">
+          <table className="tbl">
+            <tbody>
+              {allTransactions.slice(0, 8).map((t: any) => (
+                <tr key={t.id}>
+                  <td>
+                    <div className="tx-cell">
+                      <div className={`tx-cat-ico ${t.categories?.icon || 'other'}`} style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}><Icon name={(t.categories?.icon as any) || 'list'} size={14} /></div>
+                      <div>
+                        <div className="tx-name">{t.note || t.categories?.name || 'Expense'}</div>
+                        <div className="tx-note">{new Date(t.date).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US')}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span className="badge gray" style={{ background: t.categories?.color ? `${t.categories.color}20` : undefined, color: t.categories?.color }}>{t.categories?.name || 'Other'}</span></td>
+                  <td className="num"><span className={t.type === 'expense' ? 'amt-spend' : 'amt-save'} style={{ fontWeight: 700, fontSize: '14px' }}>{t.type === 'expense' ? '-' : '+'}{Number(t.amount).toLocaleString()}đ</span></td>
+                </tr>
+              ))}
+              {allTransactions.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--t3)' }}>No transactions.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

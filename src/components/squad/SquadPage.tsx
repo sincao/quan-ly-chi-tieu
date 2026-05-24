@@ -11,6 +11,7 @@ import CreateCampaignModal from './CreateCampaignModal';
 import CreateDuelModal from './CreateDuelModal';
 import AddFriendModal from './AddFriendModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import UserAvatar, { getInitials } from '@/components/ui/UserAvatar';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface SquadPageProps {
@@ -19,6 +20,7 @@ interface SquadPageProps {
 }
 
 const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) => {
+  const now = new Date();
   const { t, locale } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -68,16 +70,6 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
     loadData();
   }, [user.id, refreshKey]);
 
-  const getInitials = (p: any) => {
-    if (!p) return '??';
-    if (p.last_name && p.first_name) return (p.last_name[0] + p.first_name[0]).toUpperCase();
-    if (p.display_name) {
-      const parts = p.display_name.trim().split(' ');
-      if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
-      return p.display_name.substring(0, 2).toUpperCase();
-    }
-    return '??';
-  };
 
   const handleJoin = async (id: string) => {
     const { error } = await joinCampaign(id, user.id);
@@ -88,7 +80,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
     setConfirm({
       open: true,
       title: t('squad.leave'),
-      message: locale === 'vi' ? 'Bạn có chắc chắn muốn rời khỏi nhóm không?' : 'Are you sure you want to leave this group?',
+      message: t('squad.confirm_leave'),
       type: 'danger',
       onConfirm: async () => {
         const { error } = await leaveCampaign(id, user.id);
@@ -112,7 +104,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
     setConfirm({
       open: true,
       title: t('common.delete'),
-      message: locale === 'vi' ? 'Bạn có chắc chắn muốn xóa vĩnh viễn không?' : 'Are you sure you want to delete this permanently?',
+      message: t('squad.confirm_delete_campaign'),
       type: 'danger',
       onConfirm: async () => {
         const { error } = await deleteCampaign(id);
@@ -126,7 +118,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
     setConfirm({
       open: true,
       title: t('common.delete'),
-      message: locale === 'vi' ? 'Xóa cuộc đấu này?' : 'Delete this duel?',
+      message: t('squad.confirm_delete_duel'),
       type: 'danger',
       onConfirm: async () => {
         const { error } = await deleteDuel(id);
@@ -199,14 +191,23 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
           <div className="dash-row r-1-1">
             {campaigns.map((c: any) => {
               const dailyAmt = Number(c.daily_savings || 0);
-              const startDate = new Date(c.created_at || Date.now());
-              const diffTime = Math.abs(new Date().getTime() - startDate.getTime());
+              const startDate = new Date(c.created_at || now);
+              const diffTime = Math.abs(now.getTime() - startDate.getTime());
               const daysPassed = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
-              const totalPossible = dailyAmt * (daysPassed + (c.daysLeft || 0));
-              const totalCurrent = dailyAmt * daysPassed;
-              const pct = totalPossible > 0 ? Math.round((totalCurrent / totalPossible) * 100) : 0;
+              
               const membersCount = c.members?.length || 0;
               const isOwner = c.creator_id === user.id;
+
+              // Tính tổng tiết kiệm của cả nhóm từ dữ liệu thật
+              const totalGroupSavings = c.members?.reduce((sum: number, m: any) => {
+                const s = m.current_savings?.[0]?.current_savings || 0;
+                return sum + Number(s);
+              }, 0) || 0;
+
+              // Mục tiêu tổng của cả nhóm: (Tiết kiệm hàng ngày * Số ngày của chiến dịch) * Số thành viên
+              const totalDays = Math.max(1, Math.ceil((new Date(c.end_date).getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+              const totalGroupGoal = dailyAmt * totalDays * membersCount;
+              const pct = totalGroupGoal > 0 ? Math.round((totalGroupSavings / totalGroupGoal) * 100) : 0;
               
               return (
                 <div key={c.id} className="card flush" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -256,23 +257,25 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                         const isFriend = getFriendStatus(m.user_id) === 'friend';
                         const canSeeDetails = isMe || isFriend;
                         
-                        const memberJoinDate = new Date(m.joined_at || c.created_at || Date.now());
-                        const mDiff = Math.abs(new Date().getTime() - memberJoinDate.getTime());
-                        const memberDays = Math.max(1, Math.floor(mDiff / (1000 * 60 * 60 * 24)));
-                        const savedAmt = memberDays * dailyAmt;
+                        const memberSavings = m.current_savings?.[0]?.current_savings || 0;
 
                         return (
                           <tr key={m.user_id}>
                             <td style={{ paddingLeft: '20px', paddingTop: '8px', paddingBottom: '8px' }}>
                               <div className="tx-cell">
-                                <div className="avatar sm" style={{ 
-                                  width: '24px', 
-                                  height: '24px', 
+                                <div className="avatar sm" style={{
+                                  width: '24px',
+                                  height: '24px',
                                   fontSize: '9px',
+                                  overflow: 'hidden',
                                   background: canSeeDetails ? undefined : 'var(--bg-2)',
                                   color: canSeeDetails ? undefined : 'var(--t4)'
                                 }}>
-                                  {canSeeDetails ? getInitials(m.profiles) : <Icon name="lock" size={10} />}
+                                  {canSeeDetails
+                                    ? (m.profiles?.avatar_url
+                                        ? <img src={m.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        : getInitials(m.profiles))
+                                    : <Icon name="lock" size={10} />}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
                                   <span className="tx-name" style={{ 
@@ -292,7 +295,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                               </div>
                             </td>
                             <td className="num" style={{ paddingRight: '20px', fontWeight: 700, color: 'var(--green)', fontSize: '12px' }}>
-                              {savedAmt.toLocaleString()}đ
+                              {canSeeDetails ? `${Number(memberSavings).toLocaleString()}đ` : '🔒'}
                             </td>
                           </tr>
                         );
@@ -325,7 +328,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
               const timeLeft = Math.max(0, Math.ceil((new Date(d.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
               let amILeading = false;
               let isOpLeading = false;
-              let isDraw = myScore === opScore;
+              const isDraw = myScore === opScore;
               let scoreSuffix = 'đ';
               if (d.challenge_type === 'campaign_savings') {
                  amILeading = myScore > opScore;
@@ -333,7 +336,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
               } else {
                  amILeading = myScore < opScore;
                  isOpLeading = opScore < myScore;
-                 if (d.challenge_type === 'campaign_violations') scoreSuffix = ' ' + (locale === 'vi' ? 'lỗi' : 'vios');
+                 if (d.challenge_type === 'campaign_violations') scoreSuffix = ' ' + t('squad.vios_suffix');
               }
               return (
                 <div key={d.id} className="card flush" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -349,7 +352,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                   </div>
                   <div className="duel-vs" style={{ padding: '24px 20px 32px', gap: '12px' }}>
                     <div className="duel-side" style={{ flex: 1 }}>
-                      <div className="avatar lg" style={{ width: '56px', height: '56px', background: '#6938E8', color: '#fff', borderRadius: '50%', border: amILeading ? '3px solid var(--green)' : isDraw ? '3px solid var(--line-2)' : '3px solid var(--rose)' }}>{getInitials(myProfile)}</div>
+                      <UserAvatar profile={myProfile} className="avatar lg" style={{ width: '56px', height: '56px', background: '#6938E8', color: '#fff', borderRadius: '50%', border: amILeading ? '3px solid var(--green)' : isDraw ? '3px solid var(--line-2)' : '3px solid var(--rose)' }} />
                       <div style={{ fontSize: '11px', color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: '4px', height: '16px' }}>
                          {amILeading && <><span style={{ color: '#D97706' }}>👑</span> <span style={{ color: '#D97706', fontWeight: 700 }}>{t('squad.leading')}</span></>}
                          {isOpLeading && t('squad.trailing')}
@@ -360,7 +363,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                     </div>
                     <div className="vs-pill" style={{ background: 'var(--purple-50)', color: 'var(--purple-400)', height: '24px', padding: '0 8px', alignSelf: 'center', marginTop: '20px' }}>VS</div>
                     <div className="duel-side" style={{ flex: 1 }}>
-                      <div className="avatar lg" style={{ width: '56px', height: '56px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: isOpLeading ? '3px solid var(--green)' : isDraw ? '3px solid var(--line-2)' : '3px solid var(--rose)' }}>{getInitials(opProfile)}</div>
+                      <UserAvatar profile={opProfile} className="avatar lg" style={{ width: '56px', height: '56px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: isOpLeading ? '3px solid var(--green)' : isDraw ? '3px solid var(--line-2)' : '3px solid var(--rose)' }} />
                       <div style={{ fontSize: '11px', color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: '4px', height: '16px' }}>
                          {isOpLeading && <><span style={{ color: '#D97706' }}>👑</span> <span style={{ color: '#D97706', fontWeight: 700 }}>{t('squad.leading')}</span></>}
                          {amILeading && t('squad.trailing')}
@@ -394,7 +397,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                         <tr key={r.id}>
                           <td>
                             <div className="tx-cell">
-                              <div className="avatar sm" style={{ background: '#6938E8', color: '#fff' }}>{getInitials(r.sender)}</div>
+                              <UserAvatar profile={r.sender} className="avatar sm" style={{ background: '#6938E8', color: '#fff' }} />
                               <div>
                                 <div className="tx-name" style={{ fontSize: '14px', fontWeight: 700 }}>{r.sender?.display_name || 'Anonymous'}</div>
                                 <div style={{ fontSize: '11px', color: 'var(--t3)' }}>ID: {r.sender?.tieugon_id}</div>
@@ -403,8 +406,8 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                              <button className="btn btn-primary btn-sm" onClick={() => handleAccept(r.id)}>{locale === 'vi' ? 'Chấp nhận' : 'Accept'}</button>
-                              <button className="btn btn-outline btn-sm" onClick={() => handleDecline(r.id)}>{locale === 'vi' ? 'Từ chối' : 'Decline'}</button>
+                              <button className="btn btn-primary btn-sm" onClick={() => handleAccept(r.id)}>{t('squad.accept')}</button>
+                              <button className="btn btn-outline btn-sm" onClick={() => handleDecline(r.id)}>{t('squad.decline')}</button>
                             </div>
                           </td>
                         </tr>
@@ -418,7 +421,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th style={{ paddingLeft: '24px' }}>{locale === 'vi' ? 'TÊN' : 'NAME'}</th>
+                    <th style={{ paddingLeft: '24px' }}>{t('squad.name_col')}</th>
                     <th>{t('squad.joined_campaigns')}</th>
                     <th>{t('leaderboard.streak')}</th>
                     <th>{t('leaderboard.savings')}</th>
@@ -432,7 +435,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                       <tr key={p.id}>
                         <td style={{ paddingLeft: '24px' }}>
                           <div className="tx-cell">
-                            <div className="avatar sm" style={{ background: p.isMe ? '#6938E8' : 'var(--purple-500)', color: '#fff', fontWeight: 800 }}>{getInitials(p)}</div>
+                            <UserAvatar profile={p} className="avatar sm" style={{ background: p.isMe ? '#6938E8' : 'var(--purple-500)', color: '#fff', fontWeight: 800 }} />
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--ink)' }}>{p.display_name || 'Anonymous'}</span>
                               {p.isMe && <span className="badge purple" style={{ fontSize: '8px', padding: '1px 4px' }}>{t('common.you')}</span>}
@@ -440,7 +443,7 @@ const SquadPage: React.FC<SquadPageProps> = ({ user, subRoute = 'campaigns' }) =
                           </div>
                         </td>
                         <td>
-                          <span className="badge gray" style={{ borderRadius: '6px', padding: '4px 10px', fontSize: '12px' }}>{campaignCount} {locale === 'vi' ? 'chiến dịch' : 'campaigns'}</span>
+                          <span className="badge gray" style={{ borderRadius: '6px', padding: '4px 10px', fontSize: '12px' }}>{campaignCount} {t('squad.campaigns_badge')}</span>
                         </td>
                         <td style={{ fontWeight: 600, color: 'var(--t2)', fontSize: '13px' }}>🔥 {p.current_streak || 0} {t('common.days')}</td>
                         <td style={{ fontWeight: 800, color: 'var(--purple-700)', fontSize: '14px' }}>{Number(p.monthly_savings || 0).toLocaleString()}đ</td>

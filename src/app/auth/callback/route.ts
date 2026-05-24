@@ -5,8 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get('next') ?? '/'
+  const type = searchParams.get('type') // 'recovery' for password reset
 
   if (code) {
     const cookieStore = await cookies()
@@ -24,9 +23,7 @@ export async function GET(request: NextRequest) {
                 cookieStore.set(name, value, options)
               )
             } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
+              // ignored when called from Server Component
             }
           },
         },
@@ -34,19 +31,22 @@ export async function GET(request: NextRequest) {
     )
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      const forwardedHost = request.headers.get('x-forwarded-host') // localhost:3000
+      const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
-      if (isLocalEnv) {
-        // we can be sure that origin is localhost:3000
-        return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
-      }
+
+      // Password reset: redirect to app with mode=recovery so the app shows the update-password form
+      // Email verification: redirect with verified=true
+      const param = type === 'recovery' ? 'mode=recovery' : 'verified=true'
+      const dest = isLocalEnv
+        ? `${origin}/?${param}`
+        : forwardedHost
+          ? `https://${forwardedHost}/?${param}`
+          : `${origin}/?${param}`
+
+      return NextResponse.redirect(dest)
     }
   }
 
-  // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  // Fallback: redirect to app root with an error flag (avoids 404)
+  return NextResponse.redirect(`${origin}/?auth_error=1`)
 }

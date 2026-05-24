@@ -5,6 +5,7 @@ import Icon from '@/components/ui/Icon';
 import { createClient } from '@/lib/supabase/client';
 import { getDetailedLeaderboard } from '@/lib/supabase/queries';
 import CreateDuelModal from '@/components/squad/CreateDuelModal';
+import UserAvatar, { getInitials } from '@/components/ui/UserAvatar';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 const LeaderboardPage: React.FC = () => {
@@ -33,16 +34,6 @@ const LeaderboardPage: React.FC = () => {
     load();
   }, []);
 
-  const getInitials = (p: any) => {
-    if (!p) return '??';
-    if (p.last_name && p.first_name) return (p.last_name[0] + p.first_name[0]).toUpperCase();
-    if (p.display_name) {
-      const parts = p.display_name.trim().split(' ');
-      if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
-      return p.display_name.substring(0, 2).toUpperCase();
-    }
-    return '??';
-  };
 
   const sortedData = [...data].sort((a, b) => {
     if (metric === 'savings') return b.monthly_savings - a.monthly_savings;
@@ -96,7 +87,7 @@ const LeaderboardPage: React.FC = () => {
               onClick={() => setMetric('savings')}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-               <span>💰 {t('nav.dashboard') === 'Overview' ? 'Savings' : 'Tiết kiệm'}</span>
+               <span>💰 {t('leaderboard.savings_label')}</span>
             </button>
             <button 
               className={metric === 'win_rate' ? 'active' : ''} 
@@ -111,23 +102,29 @@ const LeaderboardPage: React.FC = () => {
 
       <div className="card podium-card" style={{ marginBottom: '24px', padding: '32px 0 0' }}>
         <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 800 }}>{t('leaderboard.podium_title')} • {metric === 'savings' ? (t('nav.dashboard') === 'Overview' ? 'Savings' : 'Tiết kiệm') : metric === 'streak' ? 'Streak' : 'Win rate'}</h3>
+          <h3 style={{ fontSize: '14px', fontWeight: 800 }}>{t('leaderboard.podium_title')} • {metric === 'savings' ? t('leaderboard.savings_label') : metric === 'streak' ? 'Streak' : 'Win rate'}</h3>
           <p style={{ fontSize: '11px', color: 'var(--t3)' }}>{t('leaderboard.month_rank')} {(new Date().getMonth() + 1)}/{new Date().getFullYear()}</p>
         </div>
 
         <div className="podium">
           <div className="podium-col" style={{ visibility: top2 ? 'visible' : 'hidden' }}>
-            <div className="medal">{getInitials(top2)}<div style={{ position: 'absolute', top: '-8px', fontSize: '14px' }}>🥈</div></div>
+            <UserAvatar profile={top2} className="medal" style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-8px', fontSize: '14px' }}>🥈</div>
+            </UserAvatar>
             <div className="nm">{top2?.display_name || '---'}</div>
             <div className="podium-bar silver"><div className="rk">#2</div><div className="v">{top2 ? getDisplayValue(top2) : '---'}</div></div>
           </div>
           <div className="podium-col" style={{ visibility: top1 ? 'visible' : 'hidden' }}>
-            <div className="medal gold">{getInitials(top1)}<div className="crown">👑</div></div>
+            <UserAvatar profile={top1} className="medal gold" style={{ position: 'relative' }}>
+              <div className="crown">👑</div>
+            </UserAvatar>
             <div className="nm">{top1?.display_name || '---'}</div>
             <div className="podium-bar gold"><div className="rk">#1</div><div className="v">{top1 ? getDisplayValue(top1) : '---'}</div></div>
           </div>
           <div className="podium-col" style={{ visibility: top3 ? 'visible' : 'hidden' }}>
-            <div className="medal">{getInitials(top3)}<div style={{ position: 'absolute', top: '-8px', fontSize: '14px' }}>🥉</div></div>
+            <UserAvatar profile={top3} className="medal" style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-8px', fontSize: '14px' }}>🥉</div>
+            </UserAvatar>
             <div className="nm">{top3?.display_name || '---'}</div>
             <div className="podium-bar bronze"><div className="rk">#3</div><div className="v">{top3 ? getDisplayValue(top3) : '---'}</div></div>
           </div>
@@ -138,7 +135,7 @@ const LeaderboardPage: React.FC = () => {
         <div className="card-h" style={{ padding: '20px 24px', borderBottom: '1px solid var(--line-2)' }}>
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: 800 }}>{t('leaderboard.full_rank')}</h2>
-            <p className="sub" style={{ fontSize: '11px' }}>{t('leaderboard.sort_by')} {metric === 'savings' ? (t('nav.dashboard') === 'Overview' ? 'savings' : 'tiết kiệm') : metric === 'streak' ? 'streak' : 'win rate'}</p>
+            <p className="sub" style={{ fontSize: '11px' }}>{t('leaderboard.sort_by')} {metric === 'savings' ? t('leaderboard.savings_label') : metric === 'streak' ? 'streak' : 'win rate'}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-2)', border: '1px solid var(--line-2)', borderRadius: '10px', padding: '0 12px', width: '260px' }}>
             <Icon name="search" size={16} style={{ color: 'var(--t3)' }} />
@@ -170,7 +167,7 @@ const LeaderboardPage: React.FC = () => {
                   <td style={{ paddingLeft: '24px', fontWeight: 800, color: rankColor }}>#{rank}</td>
                   <td>
                     <div className="tx-cell">
-                      <div className="avatar sm" style={{ background: p.isMe ? '#6938E8' : 'var(--purple-500)', color: '#fff', fontSize: '10px', fontWeight: 800, border: p.isMe ? '2px solid var(--purple-200)' : 'none' }}>{getInitials(p)}</div>
+                      <UserAvatar profile={p} className="avatar sm" style={{ background: p.isMe ? '#6938E8' : 'var(--purple-500)', color: '#fff', fontSize: '10px', fontWeight: 800, border: p.isMe ? '2px solid var(--purple-200)' : 'none' }} />
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: 700, fontSize: '13px' }}>{p.display_name || 'Anonymous'}</span>
                         {p.isMe && <span className="badge purple" style={{ fontSize: '8px', padding: '1px 3px' }}>{t('common.you')}</span>}
@@ -194,8 +191,8 @@ const LeaderboardPage: React.FC = () => {
         <div style={{ marginTop: '24px', background: '#FEF9C3', borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid #FEF08A' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fff', display: 'grid', placeItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}><Icon name="target" size={24} style={{ color: '#D97706' }} /></div>
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#92400E', letterSpacing: '0.05em', marginBottom: '2px' }}>{locale === 'vi' ? 'ĐỂ LEO HẠNG' : 'LEVEL UP'}</div>
-            <p style={{ color: '#78350F', fontSize: '14px', fontWeight: 500 }}>{t('leaderboard.motivation')} <strong style={{ fontWeight: 800 }}>{distanceToTop3.toLocaleString()}đ</strong> tiết kiệm — {locale === 'vi' ? 'tức là nhịn khoảng' : 'approx.'} <strong style={{ fontWeight: 800 }}>{bobaCups} {t('leaderboard.boba')}</strong>. {locale === 'vi' ? 'Làm được mà' : 'You got this'} 🤘</p>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#92400E', letterSpacing: '0.05em', marginBottom: '2px' }}>{t('leaderboard.level_up')}</div>
+            <p style={{ color: '#78350F', fontSize: '14px', fontWeight: 500 }}>{t('leaderboard.motivation')} <strong style={{ fontWeight: 800 }}>{distanceToTop3.toLocaleString()}đ</strong> — {t('leaderboard.level_up_approx')} <strong style={{ fontWeight: 800 }}>{bobaCups} {t('leaderboard.boba')}</strong>. {t('leaderboard.you_got_this')} 🤘</p>
           </div>
         </div>
       )}
