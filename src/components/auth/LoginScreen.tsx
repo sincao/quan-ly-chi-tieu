@@ -19,6 +19,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [pw, setPw] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,11 +36,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = t('validation.email_invalid');
     if (mode !== 'forgot') {
       if (!pw) e.pw = t('validation.required');
-      else if (pw.length < 6) e.pw = t('validation.password_min');
+      else if (mode === 'signup' && pw.length < 8) e.pw = locale === 'vi' ? 'Mật khẩu tối thiểu 8 ký tự' : 'Password must be at least 8 characters';
+      else if (mode === 'login' && pw.length < 6) e.pw = t('validation.password_min');
     }
     if (mode === 'signup') {
       if (!firstName.trim()) e.firstName = t('validation.required');
       if (!lastName.trim()) e.lastName = t('validation.required');
+      if (!agreed) e.agreed = locale === 'vi' ? 'Bạn cần đồng ý với điều khoản' : 'You must agree to the terms';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -64,7 +67,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             data: {
               first_name: firstName,
               last_name: lastName,
-              display_name: `${lastName} ${firstName}`.trim()
+              display_name: `${lastName} ${firstName}`.trim(),
             }
           }
         });
@@ -90,22 +93,40 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setMode(newMode);
     setErrors({});
     setMessage(null);
+    setFirstName('');
+    setLastName('');
+    setAgreed(false);
   };
 
   return (
-    <div className="auth-shell">
+    <div className={`auth-shell${mode === 'signup' ? ' mode-signup' : ''}`}>
       <div className="auth-art">
-        <div>
-          <div className="auth-art-bolt"><Icon name="zap" size={28} /></div>
-          <h1>Quản Lý<br />Chi Tiêu</h1>
-          <p className="tag">{t('auth.tagline')}</p>
+        {/* Desktop: always shown. Mobile: hidden when signup mode */}
+        <div className="auth-art-logo">
+          <div>
+            <div className="auth-art-bolt"><Icon name="zap" size={28} /></div>
+            <h1>Quản Lý<br />Chi Tiêu</h1>
+            <p className="tag">{t('auth.tagline')}</p>
+          </div>
+          <div className="quote">{t('auth.quote')}</div>
         </div>
-        <div className="quote">{t('auth.quote')}</div>
+        {/* Mobile only: shown when signup mode */}
+        <div className="auth-art-back">
+          <button type="button" className="auth-back-btn" onClick={() => switchMode('login')}>
+            <Icon name="arrow-left" size={16} />
+          </button>
+          <h1>{locale === 'vi' ? 'Tạo tài\nkhoản' : 'Create\naccount'}</h1>
+          <p className="tag">
+            {locale === 'vi'
+              ? 'Mất ~30 giây thôi. Sau đó app sẽ bắt đầu phán xét bạn 🤨'
+              : 'Takes ~30 seconds. Then the app starts judging you 🤨'}
+          </p>
+        </div>
       </div>
 
       <div className="auth-form-shell">
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <div>
+          <div className="auth-form-header">
             <h2>
               {mode === 'login' && t('auth.title')}
               {mode === 'signup' && t('auth.signup_title')}
@@ -135,6 +156,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   onChange={e => { setLastName(e.target.value); clearError('lastName'); }}
                   placeholder="Nguyễn"
                   disabled={loading}
+                  autoFocus
                 />
                 {errors.lastName && <span className="field-error">⚠ {errors.lastName}</span>}
               </div>
@@ -180,7 +202,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   type={show ? 'text' : 'password'}
                   value={pw}
                   onChange={e => { setPw(e.target.value); clearError('pw'); }}
-                  placeholder="••••••••"
+                  placeholder={mode === 'signup' ? (locale === 'vi' ? 'Tối thiểu 8 ký tự' : 'At least 8 characters') : '••••••••'}
                   style={{ paddingRight: 38 }}
                   disabled={loading}
                 />
@@ -194,8 +216,32 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 </button>
               </div>
               {errors.pw && <span className="field-error">⚠ {errors.pw}</span>}
+              {mode === 'signup' && !errors.pw && (
+                <span style={{ fontSize: '11px', color: 'var(--t3)', marginTop: '4px', display: 'block' }}>
+                  {locale === 'vi' ? 'Mạnh hơn nếu có số + ký tự đặc biệt' : 'Stronger with numbers + special characters'}
+                </span>
+              )}
             </div>
           )}
+
+          {mode === 'signup' && (
+            <label className="auth-terms-row" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={e => { setAgreed(e.target.checked); clearError('agreed'); }}
+                style={{ marginTop: '3px', flexShrink: 0, accentColor: 'var(--color-purple-600)', width: 15, height: 15 }}
+                disabled={loading}
+              />
+              <span style={{ fontSize: '12px', color: 'var(--t2)', lineHeight: 1.55 }}>
+                {locale === 'vi'
+                  ? <>{`Tôi đồng ý với `}<strong style={{ color: 'var(--color-purple-600)' }}>Điều khoản</strong>{` và `}<strong style={{ color: 'var(--color-purple-600)' }}>Chính sách bảo mật</strong>{`. Tôi cho phép app phán xét túi tiền tôi 🙏`}</>
+                  : <>{`I agree to the `}<strong style={{ color: 'var(--color-purple-600)' }}>Terms</strong>{` and `}<strong style={{ color: 'var(--color-purple-600)' }}>Privacy Policy</strong>{`. I allow the app to judge my wallet 🙏`}</>
+                }
+              </span>
+            </label>
+          )}
+          {errors.agreed && <span className="field-error">⚠ {errors.agreed}</span>}
 
           <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
             {loading ? t('auth.processing') : (
@@ -208,24 +254,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             )}
           </button>
 
-          <div className="auth-foot">
-            {mode === 'login' ? (
-              <>{t('auth.no_account')} <button type="button" className="link" onClick={() => switchMode('signup')}>{t('auth.register')}</button></>
-            ) : (
-              <>{t('auth.has_account')} <button type="button" className="link" onClick={() => switchMode('login')}>{t('auth.back_login')}</button></>
-            )}
-            <br />
-            <span style={{ marginTop: '8px', display: 'inline-block' }}>
-              {t('auth.terms')}
-            </span>
-            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
-              <div className="seg">
-                <button type="button" className={locale === 'vi' ? 'active' : ''} onClick={() => setLocale('vi')}>Tiếng Việt</button>
-                <button type="button" className={locale === 'en' ? 'active' : ''} onClick={() => setLocale('en')}>English</button>
-              </div>
+        </form>
+        <div className="auth-foot">
+          {mode === 'login' ? (
+            <>{t('auth.no_account')} <button type="button" className="link" onClick={() => switchMode('signup')}>{t('auth.register')}</button></>
+          ) : (
+            <>{t('auth.has_account')} <button type="button" className="link" onClick={() => switchMode('login')}>{t('auth.back_login')}</button></>
+          )}
+          <br />
+          <span style={{ marginTop: '8px', display: 'inline-block' }}>
+            {t('auth.terms')}
+          </span>
+          <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+            <div className="seg">
+              <button type="button" className={locale === 'vi' ? 'active' : ''} onClick={() => setLocale('vi')}>Tiếng Việt</button>
+              <button type="button" className={locale === 'en' ? 'active' : ''} onClick={() => setLocale('en')}>English</button>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

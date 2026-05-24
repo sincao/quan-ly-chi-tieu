@@ -203,6 +203,29 @@ export default function Home() {
       <main className="main-area">{renderContent()}</main>
       {user && <AddExpenseModal open={isAddOpen} onClose={() => setAddOpen(false)} userId={user.id} onSuccess={() => setRefreshKey(prev => prev + 1)} />}
       {user && <EditBudgetModal open={isBudgetOpen} onClose={() => setBudgetOpen(false)} userId={user.id} currentAmount={0} onSuccess={() => setRefreshKey(prev => prev + 1)} />}
+      <nav className="bottom-nav">
+        <button className={`bottom-nav-item${route === 'dashboard' ? ' active' : ''}`} onClick={() => setRoute('dashboard')}>
+          <Icon name="home" size={20} />
+          <span>{t('nav.dashboard')}</span>
+        </button>
+        <button className={`bottom-nav-item${route === 'transactions' ? ' active' : ''}`} onClick={() => setRoute('transactions')}>
+          <Icon name="list" size={20} />
+          <span>{t('nav.transactions')}</span>
+        </button>
+        <div className="bottom-nav-fab-wrap">
+          <button className="bottom-nav-fab" onClick={() => setAddOpen(true)}>
+            <Icon name="plus" size={22} />
+          </button>
+        </div>
+        <button className={`bottom-nav-item${route?.startsWith('squad') ? ' active' : ''}`} onClick={() => setRoute('squad')}>
+          <Icon name="users" size={20} />
+          <span>Squad</span>
+        </button>
+        <button className={`bottom-nav-item${route === 'leaderboard' ? ' active' : ''}`} onClick={() => setRoute('leaderboard')}>
+          <Icon name="trophy" size={20} />
+          <span>{t('nav.leaderboard')}</span>
+        </button>
+      </nav>
     </div>
   );
 }

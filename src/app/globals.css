@@ -810,18 +810,27 @@
     align-self: flex-start; max-width: 440px;
   }
 
+  /* auth-art split: logo section (desktop always, mobile login/forgot) vs back section (mobile signup) */
+  .auth-art-logo {
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .auth-art-back { display: none; }
+  .auth-back-btn { display: none; }
+
   .auth-form-shell {
-    display: flex; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 56px;
   }
   .auth-form {
     width: 100%; max-width: 380px;
     display: flex; flex-direction: column; gap: 18px;
   }
+  .auth-form-header { display: block; }
   .auth-form h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.015em; }
   .auth-form .lead { color: var(--t2); font-size: 13px; margin-top: 4px; }
   .auth-form .row { display: flex; align-items: center; justify-content: space-between; }
-  .auth-form .link { color: var(--color-purple-600); font-weight: 600; font-size: 12px; }
+  .auth-form .link, .auth-foot .link { color: var(--color-purple-600); font-weight: 600; font-size: 12px; }
   .auth-form .divider {
     display: flex; align-items: center; gap: 10px;
     font-size: 11px; color: var(--t3);
@@ -830,6 +839,142 @@
     content: ''; flex: 1; height: 1px; background-color: var(--line);
   }
   .auth-foot { font-size: 11px; color: var(--t3); text-align: center; margin-top: 4px; }
+
+/* ============ AUTH RESPONSIVE ============ */
+@media (max-width: 767px) {
+  /* ---- Shell ---- */
+  .auth-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at 10% 10%, rgba(157, 133, 244, 0.4) 0%, transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(85, 35, 201, 0.4) 0%, transparent 50%),
+      linear-gradient(135deg, #6938E8 0%, #2A1175 100%);
+  }
+
+  /* ---- Auth art: login/forgot mode ---- */
+  .auth-art {
+    flex: 0 0 auto;
+    padding: 52px 24px 24px;
+    background: none;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0;
+  }
+  .auth-art-logo { flex: unset; justify-content: flex-start; flex-direction: column; gap: 0; }
+  .auth-art h1 { font-size: 34px; margin-top: 16px; }
+  .auth-art p.tag { font-size: 13px; margin-top: 10px; opacity: 0.85; }
+  .auth-art-bolt { width: 44px; height: 44px; border-radius: 12px; }
+  .auth-art .quote { display: none; }
+
+  /* ---- Auth art: signup mode ---- */
+  .mode-signup .auth-art-logo { display: none; }
+  .mode-signup .auth-art-back {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .auth-back-btn {
+    display: grid;
+    place-items: center;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    align-self: flex-start;
+    margin-bottom: 20px;
+  }
+  .auth-art-back h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    white-space: pre-line;
+  }
+  .auth-art-back p.tag { font-size: 13px; margin-top: 10px; opacity: 0.85; }
+  /* hide form title from card when it's shown in the purple section */
+  .mode-signup .auth-form-header { display: none; }
+
+  /* ---- Form shell & card ---- */
+  .auth-form-shell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 8px 16px max(32px, env(safe-area-inset-bottom));
+    background: transparent;
+  }
+  .auth-form {
+    max-width: 100%;
+    width: 100%;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 28px 22px;
+    box-shadow: 0 8px 48px rgba(0, 0, 0, 0.25);
+  }
+
+  /* ---- Footer (below card on purple) ---- */
+  .auth-foot {
+    color: rgba(255, 255, 255, 0.75);
+    margin-top: 20px;
+    padding-bottom: 4px;
+  }
+  .auth-foot .link {
+    color: #fff;
+    font-weight: 700;
+  }
+  .auth-foot .seg {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  .auth-foot .seg button { color: rgba(255, 255, 255, 0.7); }
+  .auth-foot .seg button.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    box-shadow: none;
+  }
+}
+
+  /* ============ BOTTOM NAV ============ */
+  .bottom-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    z-index: 100;
+    padding: 0 4px env(safe-area-inset-bottom, 0px);
+    align-items: center;
+    overflow: visible;
+  }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    padding: 8px 2px;
+    font-size: 10px; font-weight: 600;
+    color: var(--t3);
+    border: none; background: none;
+    transition: color 0.12s;
+  }
+  .bottom-nav-item.active { color: var(--purple-600); }
+  .bottom-nav-fab-wrap {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bottom-nav-fab {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #8B5CF6, #6938E8);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border: none; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(105, 56, 232, 0.45);
+    transform: translateY(-10px);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .bottom-nav-fab:active { transform: translateY(-10px) scale(0.92); box-shadow: 0 2px 8px rgba(105, 56, 232, 0.3); }
 
   /* ============ SQUAD ============ */
   .squad-card { padding: 18px; }
@@ -1041,5 +1186,38 @@
       display: none;
     }
     .sidebar-area.open + .sidebar-scrim { display: block; }
+  }
+  @media (max-width: 767px) {
+    /* App shell: full viewport for main, no topbar row */
+    .app-container {
+      grid-template-rows: 1fr;
+      grid-template-areas: "main";
+    }
+    .topbar-area { display: none; }
+    .bottom-nav { display: flex; }
+    .main-inner { padding: 20px 16px calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+    /* Page header */
+    .page-head { margin-bottom: 16px; align-items: flex-start; }
+    .page-head h1 { font-size: 26px; font-weight: 800; }
+    .page-head-actions { display: none; }
+
+    /* KPI: primary spans full width, rest 2-col */
+    .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .kpi.primary { grid-column: 1 / -1; }
+    .kpi { padding: 14px 16px; }
+
+    /* Dash cards stack */
+    .dash-row.r-1-1 { grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
+
+    /* Donut: compact */
+    .donut-card { grid-template-columns: 88px 1fr; gap: 10px; }
+    .donut { width: 88px; height: 88px; }
+
+    /* Transaction table: hide category badge column */
+    .tbl tbody td:nth-child(2) { display: none; }
+
+    /* Roast */
+    .roast { margin-bottom: 16px !important; }
   }
 }
