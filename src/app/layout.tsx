@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers/QueryProvider";
 import { LanguageProvider } from '@/components/providers/LanguageProvider';
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const beVietnamPro = Be_Vietnam_Pro({
   weight: ['400', '500', '600', '700', '800'],
@@ -18,6 +19,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Quản Lý Chi Tiêu - Web App",
   description: "Stop burning $$ - Quản lý tài chính cá nhân thông minh",
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Chi Tiêu',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#7C4DFF',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -36,6 +51,7 @@ export default function RootLayout({
             {children}
           </LanguageProvider>
         </Providers>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );
