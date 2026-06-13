@@ -204,7 +204,18 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
       <div className="dash-row r-1-2" style={{ alignItems: 'start' }}>
         <div className="card flush" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="card-h">
-            <h3>Danh sách món ăn</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3>Danh sách món ăn</h3>
+              <button 
+                className="icon-btn sm" 
+                onClick={handleRandomDish}
+                title="Chọn ngẫu nhiên món"
+                style={{ color: 'var(--purple-600)' }}
+                disabled={dishes.length === 0}
+              >
+                <Icon name="dice" size={16} />
+              </button>
+            </div>
             <span className="badge gray">{dishes.length}</span>
           </div>
           <div style={{ padding: '8px' }}>
@@ -259,10 +270,20 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
                     <p style={{ fontSize: '12px', color: 'var(--t3)' }}>{selectedDish.dish_restaurants?.length || 0} địa điểm</p>
                   </div>
                 </div>
-                <button className="btn btn-outline btn-sm" onClick={handleAddRes}>
-                   <Icon name="plus" size={14} />
-                   <span>Thêm quán</span>
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn btn-outline btn-sm" 
+                    onClick={handleRandomRes}
+                    disabled={!selectedDish?.dish_restaurants || selectedDish.dish_restaurants.length === 0}
+                  >
+                    <Icon name="dice" size={14} />
+                    <span>Random quán</span>
+                  </button>
+                  <button className="btn btn-outline btn-sm" onClick={handleAddRes}>
+                    <Icon name="plus" size={14} />
+                    <span>Thêm quán</span>
+                  </button>
+                </div>
               </div>
               <div className="card-body">
                 {selectedDish.dish_restaurants && selectedDish.dish_restaurants.length > 0 ? (
