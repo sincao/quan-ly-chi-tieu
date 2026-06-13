@@ -11,7 +11,7 @@ interface RandomResultModalProps {
     restaurant: any;
   } | null;
   squadName?: string;
-  onRetry: (mode: 'any' | 'squad') => void;
+  onRetry: (mode: 'any' | 'squad', subMode?: 'all' | 'res') => void;
 }
 
 const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, result, squadName, onRetry }) => {
@@ -19,19 +19,23 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
 
   useEffect(() => {
     if (open && !result) {
-       onRetry(activeTab);
+       onRetry(activeTab, 'all');
     }
   }, [open]);
 
   if (!open) return null;
 
   const handleRetry = () => {
-    onRetry(activeTab);
+    onRetry(activeTab, 'all');
+  };
+
+  const handleRetryRes = () => {
+    onRetry(activeTab, 'res');
   };
 
   const handleTabChange = (tab: 'any' | 'squad') => {
     setActiveTab(tab);
-    onRetry(tab);
+    onRetry(tab, 'all');
   };
 
   return (
@@ -60,22 +64,22 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
             onClick={() => handleTabChange('squad')}
           >
             <span className="emoji">🍽️</span>
-            <span>Quán cho {squadName || 'bạn'}</span>
+            <span>Quán</span>
           </button>
         </div>
 
         {result ? (
           <div className="result-content">
             <div className="dish-card">
-              <span className="label">MÓN</span>
+              <span className="label">{activeTab === 'any' ? 'MÓN' : 'QUÁN'}</span>
               <div className="dish-main">
                 <span className="dish-emoji">{result.dish?.emoji || '🍜'}</span>
-                <h1 className="dish-name">{result.dish?.name}</h1>
+                <h1 className="dish-name">{activeTab === 'any' ? result.dish?.name : result.restaurant?.name}</h1>
               </div>
             </div>
 
             <div className="restaurant-card">
-              <span className="label">QUÁN GỢI Ý</span>
+              <span className="label">{activeTab === 'any' ? 'QUÁN GỢI Ý' : 'THÔNG TIN QUÁN'}</span>
               <div className="res-info">
                 <h3 className="res-name">{result.restaurant?.name}</h3>
                 <div className="rating">
@@ -93,10 +97,21 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
                 {result.restaurant?.review && (
                   <p className="res-review">{result.restaurant.review}</p>
                 )}
-                <button className="directions-btn">
-                  <Icon name="map-pin" size={14} />
-                  <span>Chỉ đường</span>
-                </button>
+                <div className="card-actions">
+                  <button className="directions-btn">
+                    <Icon name="map-pin" size={14} />
+                    <span>Chỉ đường</span>
+                  </button>
+                  {result.restaurant?.video_link && (
+                    <button 
+                      className="video-btn" 
+                      onClick={() => window.open(result.restaurant.video_link.startsWith('http') ? result.restaurant.video_link : `https://${result.restaurant.video_link}`, '_blank')}
+                    >
+                      <Icon name="play" size={14} color="#7C4DFF" />
+                      <span>Xem video</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -111,6 +126,9 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           <button className="btn-retry" onClick={handleRetry}>
             <Icon name="sparkles" size={18} />
             <span>Lắc lại</span>
+          </button>
+          <button className="btn-res" onClick={handleRetryRes}>
+            <span>Đổi quán</span>
           </button>
           <button className="btn-open" onClick={onClose}>
             <Icon name="check" size={18} />
@@ -295,6 +313,24 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           color: #1A1A1A;
           cursor: pointer;
         }
+        .card-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+        }
+        .video-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          background: #fff;
+          border: 1.5px solid #F5F2FF;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #7C4DFF;
+          cursor: pointer;
+        }
         .modal-footer {
           padding: 20px 24px 24px;
           display: flex;
@@ -313,6 +349,19 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
+        }
+        .btn-res {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 14px 20px;
+          border-radius: 14px;
+          border: 1.5px solid #F0F0F3;
+          background: #fff;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1A1A1A;
+          cursor: pointer;
         }
         .btn-retry {
           background: #fff;
