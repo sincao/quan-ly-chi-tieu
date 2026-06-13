@@ -5,6 +5,7 @@ export const DATA = {
 export const NAV_MAIN = [
   { id: 'dashboard',   label: 'Tổng quan',     icon: 'home' },
   { id: 'transactions',label: 'Giao dịch',     icon: 'list' },
+  { id: 'restaurants', label: 'Chỗ đi ăn',      icon: 'map-pin' },
 ];
 
 export const NAV_SYSTEM = [

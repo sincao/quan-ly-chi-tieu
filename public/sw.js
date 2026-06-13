@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quan-ly-chi-tieu-v1'
+const CACHE_NAME = 'quan-ly-chi-tieu-v2'
 const STATIC_ASSETS = [
   '/',
   '/favicon.ico',

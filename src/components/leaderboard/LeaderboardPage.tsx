@@ -18,6 +18,7 @@ const LeaderboardPage: React.FC = () => {
   const [targetId, setTargetId] = useState<string | null>(null);
   
   const [metric, setMetric] = useState<'savings' | 'streak' | 'win_rate'>('savings');
+  const [columnOption, setColumnOption] = useState<'default' | 'streak' | 'win_rate' | 'all'>('default');
 
   const supabase = createClient();
 
@@ -200,7 +201,8 @@ const LeaderboardPage: React.FC = () => {
       </div>
 
       <div className="card flush" style={{ overflow: 'hidden' }}>
-        <div className="card-h" style={{ padding: '20px 24px', borderBottom: '1px solid var(--line-2)' }}>
+        {/* DESKTOP HEADER */}
+        <div className="hidden md:flex card-h" style={{ padding: '20px 24px', borderBottom: '1px solid var(--line-2)' }}>
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: 800 }}>{t('leaderboard.full_rank')}</h2>
             <p className="sub" style={{ fontSize: '11px' }}>{t('leaderboard.sort_by')} {metric === 'savings' ? t('leaderboard.savings_label') : metric === 'streak' ? 'streak' : 'win rate'}</p>
@@ -211,48 +213,97 @@ const LeaderboardPage: React.FC = () => {
           </div>
         </div>
 
-        <table className="tbl lb-tbl">
-          <thead>
-            <tr style={{ background: 'var(--bg-2)' }}>
-              <th style={{ paddingLeft: '24px', fontSize: '10px', color: 'var(--t3)', fontWeight: 700 }}>{t('leaderboard.rank')}</th>
-              <th style={{ fontSize: '10px', color: 'var(--t3)', fontWeight: 700 }}>{t('leaderboard.user')}</th>
-              <th style={{ fontSize: '10px', color: 'var(--t3)', fontWeight: 700 }}>{t('leaderboard.streak')}</th>
-              <th style={{ background: metric === 'savings' ? 'rgba(124, 77, 255, 0.05)' : undefined, color: metric === 'savings' ? 'var(--purple-700)' : 'var(--t3)', fontSize: '10px', fontWeight: 800, textAlign: 'center' }}>
-                {t('leaderboard.savings')} {metric === 'savings' ? '↓' : ''}
-              </th>
-              <th style={{ background: metric === 'win_rate' ? 'rgba(124, 77, 255, 0.05)' : undefined, color: metric === 'win_rate' ? 'var(--purple-700)' : 'var(--t3)', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
-                {t('leaderboard.winrate')} {metric === 'win_rate' ? '↓' : ''}
-              </th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => {
-              const rank = sortedData.findIndex(x => x.id === p.id) + 1;
-              const rankColor = rank === 1 ? '#D97706' : rank === 2 ? '#64748B' : rank === 3 ? '#92400E' : 'var(--t3)';
-              return (
-                <tr key={p.id}>
-                  <td style={{ paddingLeft: '24px', fontWeight: 800, color: rankColor }}>#{rank}</td>
-                  <td>
-                    <div className="tx-cell">
-                      <UserAvatar profile={p} className="avatar sm" style={{ background: p.isMe ? '#6938E8' : 'var(--purple-500)', color: '#fff', fontSize: '10px', fontWeight: 800, border: p.isMe ? '2px solid var(--purple-200)' : 'none' }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 700, fontSize: '13px' }}>{p.display_name || 'Anonymous'}</span>
-                        {p.isMe && <span className="badge purple" style={{ fontSize: '8px', padding: '1px 3px' }}>{t('common.you')}</span>}
+        {/* MOBILE HEADER */}
+        <div className="block md:hidden" style={{ padding: '20px 20px', borderBottom: '1px solid var(--line-2)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>{t('leaderboard.full_rank')}</h2>
+          <p style={{ fontSize: '12px', color: 'var(--t3)', marginTop: '4px', marginBottom: '16px' }}>
+            {t('leaderboard.sort_by')} {metric === 'savings' ? t('leaderboard.savings_label') : metric === 'streak' ? 'streak' : 'win rate'}
+          </p>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-2)', border: '1px solid var(--line-2)', borderRadius: '10px', padding: '0 12px', width: '100%', marginBottom: '16px' }}>
+            <Icon name="search" size={16} style={{ color: 'var(--t3)' }} />
+            <input type="text" placeholder={t('leaderboard.search_user')} value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, padding: '12px 0', background: 'transparent', border: 0, outline: 0, fontSize: '14px' }} />
+          </div>
+
+          <div style={{ marginTop: '12px' }}>
+            <label className="label" style={{ fontSize: '11px', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+              {locale === 'vi' ? 'Hiển thị cột' : 'Display Columns'}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <select 
+                value={columnOption} 
+                onChange={e => setColumnOption(e.target.value as any)} 
+                style={{ 
+                  width: '100%', 
+                  padding: '10px 14px', 
+                  background: 'var(--bg-2)', 
+                  border: '1px solid var(--line-2)', 
+                  borderRadius: '10px', 
+                  fontSize: '13px', 
+                  fontWeight: 600, 
+                  color: 'var(--ink)', 
+                  outline: 'none',
+                  appearance: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="default">{locale === 'vi' ? 'Mặc định (Hạng, Người dùng, Tiết kiệm)' : 'Default (Rank, User, Savings)'}</option>
+                <option value="streak">{locale === 'vi' ? 'Hiển thị thêm: Streak' : 'Show also: Streak'}</option>
+                <option value="win_rate">{locale === 'vi' ? 'Hiển thị thêm: Win rate' : 'Show also: Win rate'}</option>
+                <option value="all">{locale === 'vi' ? 'Hiển thị tất cả các cột' : 'Show all columns'}</option>
+              </select>
+              <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--t3)' }}>
+                <Icon name="chevron-down" size={14} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RESPONSIVE SCROLL WRAPPER FOR TABLE */}
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+          <table className={`tbl lb-tbl option-${columnOption}`}>
+            <thead>
+              <tr style={{ background: 'var(--bg-2)' }}>
+                <th style={{ paddingLeft: '24px', fontSize: '10px', color: 'var(--t3)', fontWeight: 700 }}>{t('leaderboard.rank')}</th>
+                <th style={{ fontSize: '10px', color: 'var(--t3)', fontWeight: 700 }}>{t('leaderboard.user')}</th>
+                <th className={(columnOption === 'streak' || columnOption === 'all') ? '' : 'hidden md:table-cell'} style={{ fontSize: '10px', color: 'var(--t3)', fontWeight: 700 }}>{t('leaderboard.streak')}</th>
+                <th style={{ background: metric === 'savings' ? 'rgba(124, 77, 255, 0.05)' : undefined, color: metric === 'savings' ? 'var(--purple-700)' : 'var(--t3)', fontSize: '10px', fontWeight: 800, textAlign: 'center' }}>
+                  {t('leaderboard.savings')} {metric === 'savings' ? '↓' : ''}
+                </th>
+                <th className={(columnOption === 'win_rate' || columnOption === 'all') ? '' : 'hidden md:table-cell'} style={{ background: metric === 'win_rate' ? 'rgba(124, 77, 255, 0.05)' : undefined, color: metric === 'win_rate' ? 'var(--purple-700)' : 'var(--t3)', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+                  {t('leaderboard.winrate')} {metric === 'win_rate' ? '↓' : ''}
+                </th>
+                <th className="hidden md:table-cell"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p) => {
+                const rank = sortedData.findIndex(x => x.id === p.id) + 1;
+                const rankColor = rank === 1 ? '#D97706' : rank === 2 ? '#64748B' : rank === 3 ? '#92400E' : 'var(--t3)';
+                return (
+                  <tr key={p.id}>
+                    <td style={{ paddingLeft: '24px', fontWeight: 800, color: rankColor }}>#{rank}</td>
+                    <td>
+                      <div className="tx-cell">
+                        <UserAvatar profile={p} className="avatar sm" style={{ background: p.isMe ? '#6938E8' : 'var(--purple-500)', color: '#fff', fontSize: '10px', fontWeight: 800, border: p.isMe ? '2px solid var(--purple-200)' : 'none' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '13px' }}>{p.display_name || 'Anonymous'}</span>
+                          {p.isMe && <span className="badge purple" style={{ fontSize: '8px', padding: '1px 3px' }}>{t('common.you')}</span>}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ fontWeight: 600, fontSize: '12px' }}>🔥 {p.current_streak || 0} {t('common.days')}</td>
-                  <td style={{ background: metric === 'savings' ? 'rgba(124, 77, 255, 0.03)' : undefined, textAlign: 'center', fontWeight: 800, color: 'var(--purple-700)', fontSize: '14px' }}>{Number(p.monthly_savings || 0).toLocaleString()}đ</td>
-                  <td style={{ background: metric === 'win_rate' ? 'rgba(124, 77, 255, 0.03)' : undefined, textAlign: 'center', fontWeight: 600, color: 'var(--t2)', fontSize: '12px' }}>{p.win_rate}%</td>
-                  <td style={{ paddingRight: '20px', textAlign: 'right' }}>
-                    {!p.isMe && <button className="btn-link" style={{ color: 'var(--t3)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }} onClick={() => { setTargetId(p.id); setDuelOpen(true); }}><Icon name="zap" size={12} /><span>{t('squad.challenge')}</span></button>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td className={(columnOption === 'streak' || columnOption === 'all') ? '' : 'hidden md:table-cell'} style={{ fontWeight: 600, fontSize: '12px' }}>🔥 {p.current_streak || 0} {t('common.days')}</td>
+                    <td style={{ background: metric === 'savings' ? 'rgba(124, 77, 255, 0.03)' : undefined, textAlign: 'center', fontWeight: 800, color: 'var(--purple-700)', fontSize: '14px' }}>{Number(p.monthly_savings || 0).toLocaleString()}đ</td>
+                    <td className={(columnOption === 'win_rate' || columnOption === 'all') ? '' : 'hidden md:table-cell'} style={{ background: metric === 'win_rate' ? 'rgba(124, 77, 255, 0.03)' : undefined, textAlign: 'center', fontWeight: 600, color: 'var(--t2)', fontSize: '12px' }}>{p.win_rate}%</td>
+                    <td className="hidden md:table-cell" style={{ paddingRight: '20px', textAlign: 'right' }}>
+                      {!p.isMe && <button className="btn-link" style={{ color: 'var(--t3)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }} onClick={() => { setTargetId(p.id); setDuelOpen(true); }}><Icon name="zap" size={12} /><span>{t('squad.challenge')}</span></button>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {myRank > 0 && distanceToTop3 > 0 && (

@@ -6,6 +6,7 @@ import Topbar from '@/components/layout/Topbar';
 import Dashboard from '@/components/dashboard/Dashboard';
 import TransactionsPage from '@/components/transactions/TransactionsPage';
 import LeaderboardPage from '@/components/leaderboard/LeaderboardPage';
+import RestaurantsPage from '@/components/restaurants/RestaurantsPage';
 import SquadPage from '@/components/squad/SquadPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 import LoginScreen from '@/components/auth/LoginScreen';
@@ -19,6 +20,8 @@ import { User } from '@supabase/supabase-js';
 import { getDashboardData } from '@/lib/supabase/queries';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
+const supabase = createClient();
+
 export default function Home() {
   const { t } = useLanguage();
   const [route, setRoute] = useState<string | null>(null);
@@ -30,8 +33,6 @@ export default function Home() {
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [counts, setCounts] = useState<{ [key: string]: number }>({});
   const [errorText, setErrorText] = useState<string | null>(null);
-
-  const supabase = createClient();
 
   const changeRoute = (newRoute: string) => {
     setRoute(newRoute);
@@ -47,6 +48,14 @@ export default function Home() {
   };
 
   useEffect(() => {
+    // Safety timeout to prevent stuck loading screen
+    const timeout = setTimeout(() => {
+      if (route === null) {
+        console.warn('Auth check timed out, falling back to login');
+        changeRoute('login');
+      }
+    }, 5000);
+
     async function fetchCounts(userId: string) {
       try {
         const dashboard = await getDashboardData(userId);
@@ -60,7 +69,7 @@ export default function Home() {
 
     const checkUser = async () => {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
         const isVerified = urlParams.get('verified') === 'true';
         const isRecovery = urlParams.get('mode') === 'recovery';
 
@@ -70,7 +79,9 @@ export default function Home() {
           setUser(null);
         } else {
           setUser(session.user);
-          window.history.replaceState({}, document.title, window.location.pathname);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
           if (isRecovery) {
             changeRoute('update_password');
           } else if (isVerified) {
@@ -88,19 +99,20 @@ export default function Home() {
               isNewUser = !budgets || budgets.length === 0;
             } catch (err) {
               console.warn('Database budget check failed, falling back to localStorage:', err);
-              const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
+              const hasSeenOnboarding = typeof window !== 'undefined' ? localStorage.getItem(`onboarding_${session.user.id}`) : null;
               isNewUser = !hasSeenOnboarding;
             }
             
             if (isNewUser) {
-              localStorage.removeItem(`onboarding_${session.user.id}`);
+              if (typeof window !== 'undefined') localStorage.removeItem(`onboarding_${session.user.id}`);
               changeRoute('onboarding');
             } else {
-              localStorage.setItem(`onboarding_${session.user.id}`, 'true');
+              if (typeof window !== 'undefined') localStorage.setItem(`onboarding_${session.user.id}`, 'true');
               
               let persistedRoute = 'dashboard';
-              const saved = localStorage.getItem('active_route');
-              if (saved && !['login', 'onboarding', 'update_password', 'verified_success'].includes(saved)) {
+              const saved = typeof window !== 'undefined' ? localStorage.getItem('active_route') : null;
+              const validRoutes = ['dashboard', 'transactions', 'settings', 'restaurants', 'leaderboard', 'squad'];
+              if (saved && validRoutes.includes(saved)) {
                 persistedRoute = saved;
               }
               changeRoute(persistedRoute);
@@ -142,22 +154,23 @@ export default function Home() {
             isNewUser = !budgets || budgets.length === 0;
           } catch (err) {
             console.warn('Database budget check failed, falling back to localStorage:', err);
-            const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
+            const hasSeenOnboarding = typeof window !== 'undefined' ? localStorage.getItem(`onboarding_${session.user.id}`) : null;
             isNewUser = !hasSeenOnboarding;
           }
 
           setRoute(prev => {
             if (prev === 'login' || prev === null) {
               if (isNewUser) {
-                localStorage.removeItem(`onboarding_${session.user.id}`);
+                if (typeof window !== 'undefined') localStorage.removeItem(`onboarding_${session.user.id}`);
                 return 'onboarding';
               } else {
-                localStorage.setItem(`onboarding_${session.user.id}`, 'true');
+                if (typeof window !== 'undefined') localStorage.setItem(`onboarding_${session.user.id}`, 'true');
                 
                 let persistedRoute = 'dashboard';
                 if (typeof window !== 'undefined') {
                   const saved = localStorage.getItem('active_route');
-                  if (saved && !['login', 'onboarding', 'update_password', 'verified_success'].includes(saved)) {
+                  const validRoutes = ['dashboard', 'transactions', 'settings', 'restaurants', 'leaderboard', 'squad'];
+                  if (saved && validRoutes.includes(saved)) {
                     persistedRoute = saved;
                   }
                 }
@@ -175,7 +188,10 @@ export default function Home() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, [refreshKey]);
 
   if (route === null) {
@@ -249,6 +265,8 @@ export default function Home() {
         return <TransactionsPage onAdd={() => setAddOpen(true)} refreshKey={refreshKey} />;
       case 'leaderboard':
         return <LeaderboardPage />;
+      case 'restaurants':
+        return user ? <RestaurantsPage user={user} /> : null;
       case 'squad':
       case 'squad-campaigns':
       case 'squad-duels':
@@ -267,6 +285,7 @@ export default function Home() {
       case 'dashboard': return t('nav.dashboard');
       case 'transactions': return t('nav.transactions');
       case 'leaderboard': return t('nav.leaderboard');
+      case 'restaurants': return t('nav.restaurants');
       case 'settings': return t('nav.settings');
       default: return 'QUẢN LÝ CHI TIÊU';
     }

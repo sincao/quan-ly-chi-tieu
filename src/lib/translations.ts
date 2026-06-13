@@ -41,7 +41,8 @@ export const translations = {
       members: 'Bạn bè',
       leaderboard: 'Xếp hạng',
       settings: 'Cài đặt',
-      workspace: 'Workspace'
+      workspace: 'Workspace',
+      restaurants: 'Chỗ đi ăn'
     },
     dashboard: {
       remaining: 'Ngân sách còn lại',
@@ -287,6 +288,12 @@ export const translations = {
       status_ok: '✓ Đang giữ vững',
       member_fallback: 'Thành viên'
     },
+    restaurants: {
+      empty_title: 'Chưa có món nào',
+      empty_desc: 'Lưu lại những món bạn hay ăn. Với mỗi món, ghi chú các quán ngon kèm địa chỉ, link video và review của riêng bạn – để lần sau hết phân vân “ăn gì”.',
+      add_dish: 'Thêm món',
+      try_sample: 'Dùng thử dữ liệu mẫu'
+    },
     friends: {
       modal_title: 'Thêm bạn bè mới',
       search_placeholder: 'Nhập ID, email hoặc tên...',
@@ -347,7 +354,8 @@ export const translations = {
       members: 'Friends',
       leaderboard: 'Leaderboard',
       settings: 'Settings',
-      workspace: 'Workspace'
+      workspace: 'Workspace',
+      restaurants: 'Food Places'
     },
     dashboard: {
       remaining: 'Remaining Budget',
@@ -592,6 +600,12 @@ export const translations = {
       status_violated: '⚠️ Violated yesterday',
       status_ok: '✓ Holding steady',
       member_fallback: 'Member'
+    },
+    restaurants: {
+      empty_title: 'No dishes yet',
+      empty_desc: 'Save dishes you love. For each dish, note down great restaurants with addresses, video links, and your own reviews – so you never have to wonder "what to eat" again.',
+      add_dish: 'Add dish',
+      try_sample: 'Try sample data'
     },
     friends: {
       modal_title: 'Add New Friends',

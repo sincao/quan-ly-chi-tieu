@@ -6,81 +6,14 @@ export async function getDashboardData(userId: string) {
   const now = new Date();
   const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
-  let { data: budget } = await supabase
+  let budgetResult = await supabase
     .from('budgets')
     .select('*')
     .eq('user_id', userId)
     .eq('month_year', monthYear)
     .maybeSingle();
 
-  // If no budget record exists in the DB for the current month, a new month has started!
-  if (budget === null) {
-    try {
-      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const prevMonthYear = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-01`;
-      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).toISOString();
-
-      // Retrieve previous month's budget
-      const { data: prevBudget } = await supabase
-        .from('budgets')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('month_year', prevMonthYear)
-        .maybeSingle();
-
-      if (prevBudget && Number(prevBudget.amount_limit) > 0) {
-        // Calculate total spent (expenses) in the previous month
-        const { data: prevTransactions } = await supabase
-          .from('transactions')
-          .select('amount')
-          .eq('user_id', userId)
-          .eq('type', 'expense')
-          .gte('date', prevMonthYear)
-          .lte('date', prevMonthEnd);
-
-        const prevSpent = prevTransactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-        const remaining = Number(prevBudget.amount_limit) - prevSpent;
-
-        if (remaining > 0) {
-          // Find first income category if available
-          const { data: incomeCat } = await supabase
-            .from('categories')
-            .select('id')
-            .eq('type', 'income')
-            .limit(1)
-            .maybeSingle();
-
-          // Transfer remaining amount into savings by creating an income transaction
-          await supabase.from('transactions').insert({
-            user_id: userId,
-            category_id: incomeCat?.id || null,
-            amount: remaining,
-            type: 'income',
-            date: new Date().toISOString(),
-            note: `Tiết kiệm chuyển từ tháng trước (${String(prevMonth.getMonth() + 1).padStart(2, '0')}/${prevMonth.getFullYear()})`
-          });
-        }
-      }
-
-      // Initialize the budget limit for the new month to 0 in the database
-      const { data: newBudget } = await supabase
-        .from('budgets')
-        .insert({
-          user_id: userId,
-          month_year: monthYear,
-          amount_limit: 0
-        })
-        .select()
-        .single();
-      
-      budget = newBudget;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`budget_${userId}_${monthYear}`, '0');
-      }
-    } catch (e) {
-      console.warn('Failed to handle new month rollover logic:', e);
-    }
-  }
+  let budget = budgetResult.data;
 
   if (!budget) {
     const localBudget = typeof window !== 'undefined' ? localStorage.getItem(`budget_${userId}_${monthYear}`) : null;
@@ -89,24 +22,29 @@ export async function getDashboardData(userId: string) {
     }
   }
 
-  const { data: transactions } = await supabase
+  const transactionsResult = await supabase
     .from('transactions')
     .select('*, categories(*)')
     .eq('user_id', userId)
     .gte('date', monthYear)
     .order('date', { ascending: false });
 
-  const { data: profile } = await supabase
+  const profileResult = await supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
-  const { data: allCategories } = await supabase
+  const categoriesResult = await supabase
     .from('categories')
     .select('*');
 
-  return { budget, transactions, profile, allCategories };
+  return { 
+    budget, 
+    transactions: transactionsResult.data || [], 
+    profile: profileResult.data, 
+    allCategories: categoriesResult.data || [] 
+  };
 }
 
 export async function addTransaction(transaction: {
@@ -530,3 +468,97 @@ export async function getDetailedLeaderboard(userId: string) {
 
   return { data: leaderboard.sort((a, b) => b.monthly_savings - a.monthly_savings) };
 }
+
+export async function getDishes(userId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('dishes')
+    .select('*, dish_restaurants(*)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return { data, error };
+}
+
+export async function addDish(userId: string, dish: { name: string; emoji?: string }) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('dishes')
+    .insert([{ ...dish, user_id: userId }])
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function addRestaurant(restaurant: {
+  dish_id: string;
+  name: string;
+  address?: string;
+  video_link?: string;
+  review?: string;
+}) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('dish_restaurants')
+    .insert([restaurant])
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function deleteDish(dishId: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('dishes')
+    .delete()
+    .eq('id', dishId);
+  return { error };
+}
+
+export async function deleteRestaurant(resId: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('dish_restaurants')
+    .delete()
+    .eq('id', resId);
+  return { error };
+}
+
+export async function updateDish(dishId: string, updates: { name?: string; emoji?: string }) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('dishes')
+    .update(updates)
+    .eq('id', dishId)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function updateRestaurant(resId: string, updates: {
+  name?: string;
+  address?: string;
+  video_link?: string;
+  review?: string;
+}) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('dish_restaurants')
+    .update(updates)
+    .eq('id', resId)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function seedSampleDishes(userId: string) {
+  const { data: dish } = await addDish(userId, { name: 'Bún chả', emoji: '🍜' });
+  if (dish) {
+    await addRestaurant({
+      dish_id: dish.id,
+      name: 'Bún chả Sinh Từ',
+      address: 'Nguyễn Phong Sắc, Cầu Giấy',
+      review: 'Nước chấm ngon, thịt nướng thơm.'
+    });
+  }
+}
+
