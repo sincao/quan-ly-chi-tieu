@@ -16,7 +16,7 @@ import EditBudgetModal from '@/components/dashboard/EditBudgetModal';
 import Icon from '@/components/ui/Icon';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
-import { getDashboardData, getSquadData } from '@/lib/supabase/queries';
+import { getDashboardData } from '@/lib/supabase/queries';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function Home() {
@@ -29,73 +29,169 @@ export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [counts, setCounts] = useState<{ [key: string]: number }>({});
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const supabase = createClient();
 
+  const changeRoute = (newRoute: string) => {
+    setRoute(newRoute);
+    if (typeof window !== 'undefined' && newRoute) {
+      if (['login', 'onboarding', 'update_password', 'verified_success'].includes(newRoute)) {
+        if (newRoute === 'login') {
+          localStorage.removeItem('active_route');
+        }
+      } else {
+        localStorage.setItem('active_route', newRoute);
+      }
+    }
+  };
+
   useEffect(() => {
     async function fetchCounts(userId: string) {
-      const [dashboard, squad] = await Promise.all([
-        getDashboardData(userId),
-        getSquadData(userId)
-      ]);
-      setCounts({
-        transactions: dashboard.transactions?.length || 0,
-        squad: squad.campaigns?.length || 0
-      });
+      try {
+        const dashboard = await getDashboardData(userId);
+        setCounts({
+          transactions: dashboard.transactions?.length || 0
+        });
+      } catch (err) {
+        console.error('fetchCounts failed:', err);
+      }
     }
 
     const checkUser = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const isVerified = urlParams.get('verified') === 'true';
-      const isRecovery = urlParams.get('mode') === 'recovery';
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isVerified = urlParams.get('verified') === 'true';
+        const isRecovery = urlParams.get('mode') === 'recovery';
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setRoute('login');
-        setUser(null);
-      } else {
-        setUser(session.user);
-        window.history.replaceState({}, document.title, window.location.pathname);
-        if (isRecovery) {
-          setRoute('update_password');
-        } else if (isVerified) {
-          setRoute('verified_success');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          changeRoute('login');
+          setUser(null);
         } else {
-          const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
-          if (!hasSeenOnboarding) setRoute('onboarding');
-          else setRoute('dashboard');
+          setUser(session.user);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          if (isRecovery) {
+            changeRoute('update_password');
+          } else if (isVerified) {
+            changeRoute('verified_success');
+          } else {
+            // Check if truly new user (has never created a budget in Supabase)
+            let isNewUser = true;
+            try {
+              const { data: budgets, error } = await supabase
+                .from('budgets')
+                .select('id')
+                .eq('user_id', session.user.id);
+              
+              if (error) throw error;
+              isNewUser = !budgets || budgets.length === 0;
+            } catch (err) {
+              console.warn('Database budget check failed, falling back to localStorage:', err);
+              const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
+              isNewUser = !hasSeenOnboarding;
+            }
+            
+            if (isNewUser) {
+              localStorage.removeItem(`onboarding_${session.user.id}`);
+              changeRoute('onboarding');
+            } else {
+              localStorage.setItem(`onboarding_${session.user.id}`, 'true');
+              
+              let persistedRoute = 'dashboard';
+              const saved = localStorage.getItem('active_route');
+              if (saved && !['login', 'onboarding', 'update_password', 'verified_success'].includes(saved)) {
+                persistedRoute = saved;
+              }
+              changeRoute(persistedRoute);
+            }
+          }
+          fetchCounts(session.user.id);
         }
-        fetchCounts(session.user.id);
+      } catch (err: any) {
+        console.error('checkUser failed:', err);
+        setErrorText(err.message || String(err));
+        // Fallback
+        changeRoute('dashboard');
       }
     };
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === 'PASSWORD_RECOVERY') {
-        if (session) setUser(session.user);
-        setRoute('update_password');
-        return;
-      }
-      if (!session) {
-        setRoute('login');
-        setUser(null);
-      } else {
-        setUser(session.user);
-        setRoute(prev => {
-          if (prev === 'login' || prev === null) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        if (_event === 'PASSWORD_RECOVERY') {
+          if (session) setUser(session.user);
+          changeRoute('update_password');
+          return;
+        }
+        if (!session) {
+          changeRoute('login');
+          setUser(null);
+        } else {
+          setUser(session.user);
+          
+          // Check if truly new user (has never created a budget in Supabase)
+          let isNewUser = true;
+          try {
+            const { data: budgets, error } = await supabase
+              .from('budgets')
+              .select('id')
+              .eq('user_id', session.user.id);
+            
+            if (error) throw error;
+            isNewUser = !budgets || budgets.length === 0;
+          } catch (err) {
+            console.warn('Database budget check failed, falling back to localStorage:', err);
             const hasSeenOnboarding = localStorage.getItem(`onboarding_${session.user.id}`);
-            return hasSeenOnboarding ? 'dashboard' : 'onboarding';
+            isNewUser = !hasSeenOnboarding;
           }
-          return prev;
-        });
-        fetchCounts(session.user.id);
+
+          setRoute(prev => {
+            if (prev === 'login' || prev === null) {
+              if (isNewUser) {
+                localStorage.removeItem(`onboarding_${session.user.id}`);
+                return 'onboarding';
+              } else {
+                localStorage.setItem(`onboarding_${session.user.id}`, 'true');
+                
+                let persistedRoute = 'dashboard';
+                if (typeof window !== 'undefined') {
+                  const saved = localStorage.getItem('active_route');
+                  if (saved && !['login', 'onboarding', 'update_password', 'verified_success'].includes(saved)) {
+                    persistedRoute = saved;
+                  }
+                }
+                return persistedRoute;
+              }
+            }
+            return prev;
+          });
+          fetchCounts(session.user.id);
+        }
+      } catch (err: any) {
+        console.error('onAuthStateChange callback failed:', err);
+        setErrorText(err.message || String(err));
+        changeRoute('dashboard');
       }
     });
 
     return () => subscription.unsubscribe();
   }, [refreshKey]);
 
-  if (route === null) return <div style={{ height: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>Loading...</div>;
+  if (route === null) {
+    return (
+      <div style={{ height: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)', color: 'var(--t1)', padding: '24px', textAlign: 'center' }}>
+        <div>
+          <div style={{ marginBottom: '16px', fontWeight: 600 }}>Loading...</div>
+          {errorText && (
+            <div style={{ color: 'var(--rose)', fontSize: '14px', background: 'var(--rose-2)', padding: '12px', borderRadius: '8px', maxWidth: '400px', border: '1px solid var(--rose)' }}>
+              Error: {errorText}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (route === 'login') return <LoginScreen onLogin={() => setRefreshKey(prev => prev + 1)} />;
   
@@ -131,7 +227,7 @@ export default function Home() {
           className="btn btn-primary" 
           onClick={() => {
             const hasSeenOnboarding = localStorage.getItem(`onboarding_${user?.id}`);
-            setRoute(hasSeenOnboarding ? 'dashboard' : 'onboarding');
+            changeRoute(hasSeenOnboarding ? 'dashboard' : 'onboarding');
           }}
           style={{ minWidth: '200px', height: '48px' }}
         >
@@ -141,14 +237,14 @@ export default function Home() {
     );
   }
 
-  if (route === 'update_password') return <UpdatePasswordScreen onDone={() => setRoute('dashboard')} />;
+  if (route === 'update_password') return <UpdatePasswordScreen onDone={() => changeRoute('dashboard')} />;
 
-  if (route === 'onboarding') return user ? <Onboarding userId={user.id} onComplete={() => setRoute('dashboard')} /> : null;
+  if (route === 'onboarding') return user ? <Onboarding userId={user.id} onComplete={() => changeRoute('dashboard')} /> : null;
 
   const renderContent = () => {
     switch (route) {
       case 'dashboard':
-        return user ? <Dashboard key={refreshKey} user={user} onAdd={() => setAddOpen(true)} onEditBudget={() => setBudgetOpen(true)} onSeeAll={() => setRoute('transactions')} /> : null;
+        return user ? <Dashboard key={refreshKey} user={user} onAdd={() => setAddOpen(true)} onEditBudget={() => setBudgetOpen(true)} onSeeAll={() => changeRoute('transactions')} /> : null;
       case 'transactions':
         return <TransactionsPage onAdd={() => setAddOpen(true)} refreshKey={refreshKey} />;
       case 'leaderboard':
@@ -159,9 +255,9 @@ export default function Home() {
       case 'squad-members':
         return user ? <SquadPage user={user} subRoute={route === 'squad' || route === 'squad-campaigns' ? 'campaigns' : route === 'squad-duels' ? 'duels' : 'members'} /> : null;
       case 'settings':
-        return user ? <SettingsPage user={user} onLogout={() => setRoute('login')} onProfileUpdate={() => setProfileRefreshKey(k => k + 1)} /> : null;
+        return user ? <SettingsPage user={user} onLogout={() => changeRoute('login')} onProfileUpdate={() => setProfileRefreshKey(k => k + 1)} /> : null;
       default:
-        return user ? <Dashboard user={user} onAdd={() => setAddOpen(true)} onEditBudget={() => setBudgetOpen(true)} onSeeAll={() => setRoute('transactions')} /> : null;
+        return user ? <Dashboard user={user} onAdd={() => setAddOpen(true)} onEditBudget={() => setBudgetOpen(true)} onSeeAll={() => changeRoute('transactions')} /> : null;
     }
   };
 
@@ -190,7 +286,7 @@ export default function Home() {
       <div className={`sidebar-area ${isSidebarOpen ? 'open' : ''}`}>
         <Sidebar
           currentRoute={route}
-          setRoute={(r) => { setRoute(r); setSidebarOpen(false); }}
+          setRoute={(r) => { changeRoute(r); setSidebarOpen(false); }}
           open={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
           user={user}
@@ -204,11 +300,11 @@ export default function Home() {
       {user && <AddExpenseModal open={isAddOpen} onClose={() => setAddOpen(false)} userId={user.id} onSuccess={() => setRefreshKey(prev => prev + 1)} />}
       {user && <EditBudgetModal open={isBudgetOpen} onClose={() => setBudgetOpen(false)} userId={user.id} currentAmount={0} onSuccess={() => setRefreshKey(prev => prev + 1)} />}
       <nav className="bottom-nav">
-        <button className={`bottom-nav-item${route === 'dashboard' ? ' active' : ''}`} onClick={() => setRoute('dashboard')}>
+        <button className={`bottom-nav-item${route === 'dashboard' ? ' active' : ''}`} onClick={() => changeRoute('dashboard')}>
           <Icon name="home" size={20} />
           <span>{t('nav.dashboard')}</span>
         </button>
-        <button className={`bottom-nav-item${route === 'transactions' ? ' active' : ''}`} onClick={() => setRoute('transactions')}>
+        <button className={`bottom-nav-item${route === 'transactions' ? ' active' : ''}`} onClick={() => changeRoute('transactions')}>
           <Icon name="list" size={20} />
           <span>{t('nav.transactions')}</span>
         </button>
@@ -217,15 +313,7 @@ export default function Home() {
             <Icon name="plus" size={22} />
           </button>
         </div>
-        <button className={`bottom-nav-item${route?.startsWith('squad') ? ' active' : ''}`} onClick={() => setRoute('squad')}>
-          <Icon name="users" size={20} />
-          <span>Squad</span>
-        </button>
-        <button className={`bottom-nav-item${route === 'leaderboard' ? ' active' : ''}`} onClick={() => setRoute('leaderboard')}>
-          <Icon name="trophy" size={20} />
-          <span>{t('nav.leaderboard')}</span>
-        </button>
-        <button className={`bottom-nav-item${route === 'settings' ? ' active' : ''}`} onClick={() => setRoute('settings')}>
+        <button className={`bottom-nav-item${route === 'settings' ? ' active' : ''}`} onClick={() => changeRoute('settings')}>
           <Icon name="user" size={20} />
           <span>{t('settings.profile')}</span>
         </button>

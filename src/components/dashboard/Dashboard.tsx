@@ -64,9 +64,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
 
   useEffect(() => {
     async function loadData() {
-      const dbData = await getDashboardData(user.id);
-      setData(dbData);
-      setLoading(false);
+      try {
+        const dbData = await getDashboardData(user.id);
+        setData(dbData);
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [user.id]);
@@ -193,12 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
         </div>
       </div>
 
-      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
-        <style jsx>{`
-          @media (min-width: 768px) {
-            .kpi-grid { grid-template-columns: repeat(4, 1fr) !important; }
-          }
-        `}</style>
+      <div className="kpi-grid">
         <Kpi primary label={t('dashboard.remaining')} value={remainingBudget.toLocaleString()} unit="đ" delta={`${pctSpent}% used`} meta={`${budgetLimit.toLocaleString()}đ limit`} bar={pctSpent} onAction={onEditBudget} />
         <Kpi icon="arrow-right" label={t('dashboard.spent')} value={totalSpentKPI.toLocaleString()} unit="đ" delta="▲ 0%" deltaDir="down" meta="vs last month" />
         <Kpi icon="piggy" label={t('dashboard.savings')} value={savedValue.toLocaleString()} unit="đ" delta="▲ 0%" deltaDir="up" meta="over goal" />
@@ -332,7 +332,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onAdd, onEditBudget, onSeeA
           <button className="btn btn-ghost btn-sm" onClick={onSeeAll}>{t('dashboard.see_all')}</button>
         </div>
         <div className="card-body tight">
-          <table className="tbl">
+          <table className="tbl tx-tbl">
             <tbody>
               {allTransactions.slice(0, 8).map((t: any) => (
                 <tr key={t.id}>

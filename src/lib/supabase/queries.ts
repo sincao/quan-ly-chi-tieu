@@ -13,8 +13,77 @@ export async function getDashboardData(userId: string) {
     .eq('month_year', monthYear)
     .maybeSingle();
 
-  if (!budget || !budget.amount_limit) {
-    const localBudget = localStorage.getItem(`budget_${userId}_${monthYear}`);
+  // If no budget record exists in the DB for the current month, a new month has started!
+  if (budget === null) {
+    try {
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthYear = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-01`;
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).toISOString();
+
+      // Retrieve previous month's budget
+      const { data: prevBudget } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('month_year', prevMonthYear)
+        .maybeSingle();
+
+      if (prevBudget && Number(prevBudget.amount_limit) > 0) {
+        // Calculate total spent (expenses) in the previous month
+        const { data: prevTransactions } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', userId)
+          .eq('type', 'expense')
+          .gte('date', prevMonthYear)
+          .lte('date', prevMonthEnd);
+
+        const prevSpent = prevTransactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+        const remaining = Number(prevBudget.amount_limit) - prevSpent;
+
+        if (remaining > 0) {
+          // Find first income category if available
+          const { data: incomeCat } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('type', 'income')
+            .limit(1)
+            .maybeSingle();
+
+          // Transfer remaining amount into savings by creating an income transaction
+          await supabase.from('transactions').insert({
+            user_id: userId,
+            category_id: incomeCat?.id || null,
+            amount: remaining,
+            type: 'income',
+            date: new Date().toISOString(),
+            note: `Tiết kiệm chuyển từ tháng trước (${String(prevMonth.getMonth() + 1).padStart(2, '0')}/${prevMonth.getFullYear()})`
+          });
+        }
+      }
+
+      // Initialize the budget limit for the new month to 0 in the database
+      const { data: newBudget } = await supabase
+        .from('budgets')
+        .insert({
+          user_id: userId,
+          month_year: monthYear,
+          amount_limit: 0
+        })
+        .select()
+        .single();
+      
+      budget = newBudget;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`budget_${userId}_${monthYear}`, '0');
+      }
+    } catch (e) {
+      console.warn('Failed to handle new month rollover logic:', e);
+    }
+  }
+
+  if (!budget) {
+    const localBudget = typeof window !== 'undefined' ? localStorage.getItem(`budget_${userId}_${monthYear}`) : null;
     if (localBudget) {
       budget = { amount_limit: parseInt(localBudget, 10) };
     }
@@ -123,7 +192,9 @@ export async function createMonthlyBudget(userId: string, amount: number) {
 
   const now = new Date();
   const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-  localStorage.setItem(`budget_${userId}_${monthYear}`, amount.toString());
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`budget_${userId}_${monthYear}`, amount.toString());
+  }
 
   const { data, error } = await supabase
     .from('budgets')

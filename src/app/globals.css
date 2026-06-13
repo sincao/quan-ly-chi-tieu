@@ -393,7 +393,7 @@
   .card-body.tight { padding: 14px 18px; }
 
   /* ============ KPI ============ */
-  .kpi-row {
+  .kpi-row, .kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
@@ -1163,10 +1163,17 @@
   /* RESPONSIVE */
   @media (max-width: 1180px) {
     .kpi-row { grid-template-columns: 1fr 1fr; }
+    .kpi-grid { grid-template-columns: 1fr !important; }
     .dash-row.r-2-1, .dash-row.r-1-2 { grid-template-columns: 1fr; }
     .donut-card { grid-template-columns: 140px 1fr; }
   }
   @media (max-width: 768px) {
+    .kpi-grid {
+      grid-template-columns: 1fr !important;
+    }
+    .lb-tbl.option-all { min-width: 650px !important; }
+    .lb-tbl.option-streak, .lb-tbl.option-win_rate { min-width: 500px !important; }
+    .lb-tbl.option-default { min-width: 100% !important; }
     .app-container {
       grid-template-columns: 1fr;
       grid-template-rows: var(--topbar-h) 1fr;
@@ -1204,6 +1211,7 @@
 
     /* KPI: primary spans full width, rest 2-col */
     .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .kpi-grid { grid-template-columns: 1fr !important; gap: 12px; margin-bottom: 24px; }
     .kpi.primary { grid-column: 1 / -1; }
     .kpi { padding: 14px 16px; }
 
@@ -1215,7 +1223,7 @@
     .donut { width: 88px; height: 88px; }
 
     /* Transaction table: hide category badge column */
-    .tbl tbody td:nth-child(2) { display: none; }
+    .tx-tbl tbody td:nth-child(2) { display: none; }
 
     /* Roast */
     .roast { margin-bottom: 16px !important; }
