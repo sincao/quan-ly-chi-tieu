@@ -1,0 +1,1 @@
+ALTER TABLE public.dish_restaurants ADD COLUMN IF NOT EXISTS rating INTEGER DEFAULT 5;

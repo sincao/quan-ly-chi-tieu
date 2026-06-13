@@ -42,7 +42,8 @@ export const translations = {
       leaderboard: 'Xếp hạng',
       settings: 'Cài đặt',
       workspace: 'Workspace',
-      restaurants: 'Chỗ đi ăn'
+      restaurants: 'Quán Ăn',
+      split: 'Chia tiền nhóm'
     },
     dashboard: {
       remaining: 'Ngân sách còn lại',

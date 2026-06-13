@@ -21,11 +21,15 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
   const [selectedDishId, setSelectedDishId] = useState<string | null>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   
+  // Search states
+  const [dishSearch, setDishSearch] = useState('');
+  const [resSearch, setResSearch] = useState('');
+
   // Modal states
   const [isDishModalOpen, setDishModalOpen] = useState(false);
   const [isResModalOpen, setResModalOpen] = useState(false);
   const [randomModalOpen, setRandomModalOpen] = useState(false);
-  const [randomResult, setRandomResult] = useState<any>(null);
+  const [randomResult, setRandomResult] = useState<{ dish: any, restaurant: any } | null>(null);
   const [editDish, setEditDish] = useState<any>(null);
   const [editRes, setEditRes] = useState<any>(null);
 
@@ -71,39 +75,29 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
   const handleRandomDish = () => {
     if (dishes.length === 0) return;
     const randomIndex = Math.floor(Math.random() * dishes.length);
-    setSelectedDishId(dishes[randomIndex].id);
-  };
-
-  const handleGlobalRandom = () => {
-    const allItems: any[] = [];
-    dishes.forEach(d => {
-      (d.dish_restaurants || []).forEach((r: any) => {
-        allItems.push({ dish: d, restaurant: r });
-      });
-    });
-
-    if (allItems.length === 0) return;
-    const randomIndex = Math.floor(Math.random() * allItems.length);
-    setRandomResult(allItems[randomIndex]);
-    setRandomModalOpen(true);
-  };
-
-  const handleRandomRes = () => {
-    const dish = dishes.find(d => d.id === selectedDishId);
-    if (!dish || !dish.dish_restaurants || dish.dish_restaurants.length === 0) {
-      handleGlobalRandom();
-      return;
+    const dish = dishes[randomIndex];
+    
+    // Pick a restaurant for this dish if any exist
+    let restaurant = null;
+    if (dish.dish_restaurants && dish.dish_restaurants.length > 0) {
+      const resIndex = Math.floor(Math.random() * dish.dish_restaurants.length);
+      restaurant = dish.dish_restaurants[resIndex];
     }
-    const randomIndex = Math.floor(Math.random() * dish.dish_restaurants.length);
-    setRandomResult({ dish, restaurant: dish.dish_restaurants[randomIndex] });
-    setRandomModalOpen(true);
+    
+    setRandomResult({ dish, restaurant });
   };
 
-  const handleRetry = (mode: 'any' | 'squad') => {
+  const handleRandomResOnly = (currentDish: any) => {
+    if (!currentDish || !currentDish.dish_restaurants || currentDish.dish_restaurants.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * currentDish.dish_restaurants.length);
+    setRandomResult({ dish: currentDish, restaurant: currentDish.dish_restaurants[randomIndex] });
+  };
+
+  const handleRetry = (mode: 'any' | 'squad', currentDish?: any) => {
     if (mode === 'any') {
-      handleGlobalRandom();
+      handleRandomDish();
     } else {
-      handleRandomRes();
+      handleRandomResOnly(currentDish);
     }
   };
 
@@ -155,6 +149,11 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
     setResModalOpen(true);
   };
 
+  const handleOpenRandom = () => {
+    handleRandomDish();
+    setRandomModalOpen(true);
+  };
+
   if (loading && dishes.length === 0) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px' }}>
@@ -163,7 +162,16 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
     );
   }
 
+  const filteredDishes = dishes.filter(d => 
+    d.name.toLowerCase().includes(dishSearch.toLowerCase())
+  );
+
   const selectedDish = dishes.find(d => d.id === selectedDishId);
+  
+  const filteredRestaurants = selectedDish?.dish_restaurants?.filter((res: any) => 
+    res.name.toLowerCase().includes(resSearch.toLowerCase()) || 
+    (res.address && res.address.toLowerCase().includes(resSearch.toLowerCase()))
+  ) || [];
 
   if (dishes.length === 0) {
     return (
@@ -223,7 +231,7 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--ink)', marginBottom: '4px' }}>{t('nav.restaurants')}</h1>
           <p style={{ fontSize: '14px', color: 'var(--t3)', fontWeight: 500 }}>
-            {dishes.length} món · {dishes.reduce((acc, d) => acc + (d.dish_restaurants?.length || 0), 0)} quán đã lưu
+             Tìm xem hôm nay nên ăn món gì ở đâu nhen!
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
@@ -241,47 +249,56 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
               gap: '8px',
               boxShadow: '0 4px 15px rgba(124, 77, 255, 0.25)'
             }} 
-            onClick={handleGlobalRandom}
+            onClick={handleOpenRandom}
             disabled={dishes.length === 0}
           >
             <span style={{ fontSize: '18px' }}>🎲</span>
             <span>Ăn gì hôm nay?</span>
-          </button>
-          <button 
-            className="btn btn-outline" 
-            onClick={handleAddDish}
-            style={{ 
-              padding: '10px 20px', 
-              borderRadius: '12px',
-              fontWeight: 700,
-              background: '#fff'
-            }}
-          >
-            <Icon name="plus" size={18} />
-            <span>{t('restaurants.add_dish')}</span>
           </button>
         </div>
       </div>
 
       <div className="dash-row r-1-2" style={{ alignItems: 'start' }}>
         <div className="card flush" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card-h">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3>Danh sách món ăn</h3>
+          <div className="card-h" style={{ padding: '16px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Danh sách món ăn</h3>
               <button 
-                className="icon-btn sm" 
-                onClick={handleRandomDish}
-                title="Chọn ngẫu nhiên món"
-                style={{ color: 'var(--purple-600)' }}
-                disabled={dishes.length === 0}
+                className="btn btn-outline btn-sm" 
+                onClick={handleAddDish}
+                style={{ padding: '6px 12px', borderRadius: '8px' }}
               >
-                <Icon name="dice" size={16} />
+                <Icon name="plus" size={14} />
+                <span>Thêm món</span>
               </button>
             </div>
-            <span className="badge gray">{dishes.length}</span>
           </div>
-          <div style={{ padding: '8px' }}>
-            {dishes.map(dish => (
+          
+          <div style={{ padding: '0 16px 12px' }}>
+             <div style={{ position: 'relative' }}>
+                <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--t3)' }}>
+                   <Icon name="search" size={14} />
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Tìm món..." 
+                  value={dishSearch}
+                  onChange={(e) => setDishSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px 10px 36px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--line)',
+                    background: 'var(--bg)',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                />
+             </div>
+          </div>
+
+          <div style={{ padding: '8px', maxHeight: '60vh', overflowY: 'auto' }}>
+            {filteredDishes.map(dish => (
               <div 
                 key={dish.id} 
                 style={{ 
@@ -318,6 +335,11 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
                 </div>
               </div>
             ))}
+            {filteredDishes.length === 0 && (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--t3)', fontSize: '13px' }}>
+                Không tìm thấy món này.
+              </div>
+            )}
           </div>
         </div>
 
@@ -329,66 +351,108 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
                   <span style={{ fontSize: '28px' }}>{selectedDish.emoji || '🍽️'}</span>
                   <div>
                     <h3 style={{ fontSize: '18px' }}>{selectedDish.name}</h3>
-                    <p style={{ fontSize: '12px', color: 'var(--t3)' }}>{selectedDish.dish_restaurants?.length || 0} địa điểm</p>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button 
-                    className="btn btn-outline btn-sm" 
-                    onClick={handleRandomRes}
-                    disabled={!selectedDish?.dish_restaurants || selectedDish.dish_restaurants.length === 0}
-                  >
-                    <Icon name="dice" size={14} />
-                    <span>Random quán</span>
-                  </button>
-                  <button className="btn btn-outline btn-sm" onClick={handleAddRes}>
-                    <Icon name="plus" size={14} />
-                    <span>Thêm quán</span>
-                  </button>
                 </div>
               </div>
-              <div className="card-body">
-                {selectedDish.dish_restaurants && selectedDish.dish_restaurants.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {selectedDish.dish_restaurants.map((res: any) => (
-                      <div key={res.id} style={{ 
-                        padding: '16px', 
-                        borderRadius: '12px', 
-                        background: 'var(--bg-2)',
-                        border: '1px solid var(--line-2)'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                           <h4 style={{ fontWeight: 700, fontSize: '15px' }}>{res.name}</h4>
-                           <div style={{ display: 'flex', gap: '8px' }}>
-                              {res.video_link && (
-                                <a href={res.video_link.startsWith('http') ? res.video_link : `https://${res.video_link}`} target="_blank" rel="noreferrer" className="icon-btn sm" style={{ color: 'var(--rose)' }}>
-                                  <Icon name="zap" size={14} />
-                                </a>
-                              )}
-                              <button className="icon-btn sm" onClick={() => handleEditRes(res)}><Icon name="edit" size={14} /></button>
-                              <button className="icon-btn sm" onClick={() => handleDeleteRes(res)} style={{ color: 'var(--rose)' }}><Icon name="trash" size={14} /></button>
-                           </div>
-                        </div>
-                        {res.address && (
-                          <div style={{ fontSize: '13px', color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                            <Icon name="map-pin" size={14} />
-                            <span>{res.address}</span>
+
+              <div style={{ padding: '16px 20px 0' }}>
+                 <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--t3)' }}>
+                       <Icon name="search" size={14} />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder={`Tìm quán ${selectedDish.name}...`} 
+                      value={resSearch}
+                      onChange={(e) => setResSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px 10px 36px',
+                        borderRadius: '10px',
+                        border: '1.5px solid var(--line)',
+                        background: 'var(--bg)',
+                        fontSize: '13px',
+                        outline: 'none'
+                      }}
+                    />
+                 </div>
+              </div>
+
+              <div className="card-body res-table-wrapper" style={{ maxHeight: '65vh', overflowY: 'auto', padding: 0 }}>
+                <table className="res-table">
+                  <thead>
+                    <tr>
+                      <th>QUÁN</th>
+                      <th>ĐỊA CHỈ</th>
+                      <th>VIDEO</th>
+                      <th>REVIEW CỦA BẠN</th>
+                      <th>ĐÁNH GIÁ</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRestaurants.map((res: any) => (
+                      <tr key={res.id}>
+                        <td style={{ fontWeight: 800 }}>{res.name}</td>
+                        <td>
+                          {res.address && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--t2)' }}>
+                              <Icon name="map-pin" size={14} />
+                              <span>{res.address}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {res.video_link ? (
+                            <button 
+                              className="btn-xem"
+                              onClick={() => window.open(res.video_link.startsWith('http') ? res.video_link : `https://${res.video_link}`, '_blank')}
+                            >
+                              <Icon name="play" size={12} />
+                              <span>Xem</span>
+                            </button>
+                          ) : '-'}
+                        </td>
+                        <td style={{ color: 'var(--t3)', fontSize: '13px' }}>{res.review || '-'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            {[...Array(5)].map((_, i) => (
+                              <Icon 
+                                key={i} 
+                                name="star" 
+                                size={12} 
+                                fill={i < (res.rating || 5) ? "#FFB800" : "none"} 
+                                color={i < (res.rating || 5) ? "#FFB800" : "#E0E0E0"} 
+                              />
+                            ))}
                           </div>
-                        )}
-                        {res.review && (
-                          <p style={{ fontSize: '13px', color: 'var(--t3)', lineHeight: 1.5, background: '#fff', padding: '10px', borderRadius: '8px', borderLeft: '3px solid var(--purple-400)' }}>
-                            "{res.review}"
-                          </p>
-                        )}
-                      </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button className="icon-btn sm" onClick={() => handleEditRes(res)}><Icon name="edit" size={14} /></button>
+                            <button className="icon-btn sm" onClick={() => handleDeleteRes(res)} style={{ color: 'var(--rose)' }}><Icon name="trash" size={14} /></button>
+                          </div>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                ) : (
-                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--t3)' }}>
-                    <p>Chưa có quán nào cho món này.</p>
-                    <button className="btn btn-primary btn-sm" style={{ marginTop: '12px' }} onClick={handleAddRes}>Thêm quán ngay</button>
+                  </tbody>
+                </table>
+                {filteredRestaurants.length === 0 && (
+                  <div style={{ padding: '60px 24px', textAlign: 'center', color: 'var(--t3)' }}>
+                    <p>{resSearch ? 'Không tìm thấy quán này.' : 'Chưa có quán nào cho món này.'}</p>
+                    {!resSearch && <button className="btn btn-primary btn-sm" style={{ marginTop: '12px' }} onClick={handleAddRes}>Thêm quán ngay</button>}
                   </div>
                 )}
+              </div>
+              
+              <div className="card-f" style={{ padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--line)' }}>
+                 <span style={{ fontSize: '13px', color: 'var(--t3)' }}>
+                   Hiện {filteredRestaurants.length} / {selectedDish.dish_restaurants?.length || 0} quán
+                 </span>
+                 <button className="btn btn-outline btn-sm" onClick={handleAddRes} style={{ padding: '6px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Icon name="plus" size={14} />
+                    <span style={{ fontWeight: 700 }}>Thêm quán</span>
+                 </button>
               </div>
             </>
           ) : (
@@ -400,15 +464,69 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
       </div>
 
       <AddDishModal open={isDishModalOpen} onClose={() => setDishModalOpen(false)} userId={user.id} onSuccess={() => fetchDishes()} editDish={editDish} />
-      {selectedDishId && <AddRestaurantModal open={isResModalOpen} onClose={() => setResModalOpen(false)} dishId={selectedDishId} onSuccess={() => fetchDishes()} editRes={editRes} />}
+      {selectedDishId && (
+        <AddRestaurantModal 
+          open={isResModalOpen} 
+          onClose={() => setResModalOpen(false)} 
+          dishId={selectedDishId} 
+          dishName={selectedDish?.name}
+          onSuccess={() => fetchDishes()} 
+          editRes={editRes} 
+        />
+      )}
       <RandomResultModal 
         open={randomModalOpen} 
         onClose={() => setRandomModalOpen(false)} 
         result={randomResult}
+        allDishes={dishes}
         squadName={campaigns.length > 0 ? campaigns[0].name : undefined}
         onRetry={handleRetry}
       />
       <ConfirmModal open={confirm.open} title={confirm.title} message={confirm.message} type={confirm.type} onConfirm={confirm.onConfirm} onClose={() => setConfirm(c => ({ ...c, open: false }))} />
+
+      <style jsx>{`
+        .res-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+        .res-table th {
+          text-align: left;
+          padding: 12px 20px;
+          background: var(--bg);
+          color: var(--t3);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid var(--line);
+        }
+        .res-table td {
+          padding: 16px 20px;
+          border-bottom: 1px solid var(--line-2);
+          vertical-align: middle;
+        }
+        .res-table tr:hover {
+          background: var(--bg);
+        }
+        .btn-xem {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: #F5F2FF;
+          border: 1px solid #E8E0FF;
+          border-radius: 20px;
+          color: #7C4DFF;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-xem:hover {
+          background: #7C4DFF;
+          color: #fff;
+        }
+      `}</style>
     </div>
   );
 };

@@ -495,6 +495,7 @@ export async function addRestaurant(restaurant: {
   address?: string;
   video_link?: string;
   review?: string;
+  rating?: number;
 }) {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -539,6 +540,7 @@ export async function updateRestaurant(resId: string, updates: {
   address?: string;
   video_link?: string;
   review?: string;
+  rating?: number;
 }) {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -562,3 +564,62 @@ export async function seedSampleDishes(userId: string) {
   }
 }
 
+export async function getTrips(userId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('trips')
+    .select('*, trip_members(count)')
+    .eq('creator_id', userId)
+    .order('created_at', { ascending: false });
+  return { data, error };
+}
+
+export async function getTripDetails(tripId: string) {
+  const supabase = createClient();
+  const { data: trip, error } = await supabase
+    .from('trips')
+    .select('*, trip_members(*, profiles(*)), trip_expenses(*)')
+    .eq('id', tripId)
+    .single();
+  return { trip, error };
+}
+
+export async function addTrip(trip: { creator_id: string; name: string; start_date?: string; end_date?: string }) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('trips')
+    .insert([trip])
+    .select()
+    .single();
+  
+  if (data) {
+    // Correctly add creator as member with their user_id
+    const { error: memError } = await supabase.from('trip_members').insert({
+      trip_id: data.id,
+      user_id: trip.creator_id,
+      nickname: 'Bạn'
+    });
+    if (memError) console.error('Error adding creator as member:', memError);
+  }
+  return { data, error };
+}
+
+export async function addTripMember(member: { trip_id: string; nickname: string }) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('trip_members')
+    .insert([member])
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function addTripExpense(expense: { trip_id: string; payer_id: string; name: string; amount: number; category?: string; date?: string }) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('trip_expenses')
+    .insert([expense])
+    .select()
+    .single();
+  return { data, error };
+}

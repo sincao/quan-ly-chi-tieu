@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import Icon, { IconName } from '@/components/ui/Icon';
 import { NAV_MAIN, NAV_SYSTEM } from '@/lib/constants';
@@ -18,7 +20,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose, user, counts, profileRefreshKey }) => {
   const { t } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['squad']);
   const supabase = createClient();
 
   useEffect(() => {
@@ -34,12 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
     }
     loadProfile();
   }, [user, profileRefreshKey]);
-
-  useEffect(() => {
-    if (currentRoute?.startsWith('squad')) {
-      if (!expandedGroups.includes('squad')) setExpandedGroups([...expandedGroups, 'squad']);
-    }
-  }, [currentRoute]);
 
   const getInitials = () => {
     if (profile?.last_name && profile?.first_name) {
@@ -61,59 +56,32 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
 
   const userEmail = user?.email || 'Not logged in';
 
-  const toggleGroup = (id: string) => {
-    setExpandedGroups(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const NavItem = ({ item, isSub = false }: { item: any, isSub?: boolean }) => {
+  const NavItem = ({ item }: { item: any }) => {
     const count = counts?.[item.id];
-    const isActive = currentRoute === item.id || (item.subItems && currentRoute?.startsWith(item.id));
-    const isExpanded = expandedGroups.includes(item.id);
-
-    // Dynamic translation key based on ID
-    const tKey = item.id.startsWith('squad-') ? item.id.replace('squad-', '') : item.id;
+    const isActive = currentRoute === item.id;
 
     return (
       <div className="sb-nav-item-wrapper">
         <button
-          className={(isActive && !item.subItems ? 'active' : '') + (isSub ? ' sub' : '')}
+          className={isActive ? 'active' : ''}
           onClick={() => {
-            if (item.subItems) {
-              toggleGroup(item.id);
-            } else {
-              setRoute(item.id);
-              onClose && onClose();
-            }
+            setRoute(item.id);
+            onClose && onClose();
           }}
           style={{
             width: '100%',
             borderRadius: 0,
-            paddingLeft: isSub ? '44px' : '16px',
+            paddingLeft: '16px',
             paddingRight: '16px',
-            background: (isActive && !item.subItems) ? 'rgba(255,255,255,0.15)' : 'transparent'
+            background: isActive ? 'rgba(255,255,255,0.15)' : 'transparent'
           }}
         >
           <span className="ico" style={{ opacity: isActive ? 1 : 0.7 }}>
-            <Icon name={item.icon as IconName} size={isSub ? 13 : 15} />
+            <Icon name={item.icon as IconName} size={15} />
           </span>
-          <span style={{ flex: 1, fontWeight: isActive ? 700 : 500 }}>{t(`nav.${tKey}`)}</span>
-          {item.subItems && (
-            <span style={{ transform: isExpanded ? 'rotate(0)' : 'rotate(-90deg)', transition: 'transform 0.2s', opacity: 0.5 }}>
-              <Icon name="chevron-down" size={12} />
-            </span>
-          )}
-          {!item.subItems && count != null && count > 0 && <span className="count">{count}</span>}
+          <span style={{ flex: 1, fontWeight: isActive ? 700 : 500 }}>{t(`nav.${item.id}`)}</span>
+          {count != null && count > 0 && <span className="count">{count}</span>}
         </button>
-
-        {item.subItems && isExpanded && (
-          <div className="sb-sub-nav">
-            {item.subItems.map((sub: any) => (
-              <NavItem key={sub.id} item={sub} isSub />
-            ))}
-          </div>
-        )}
       </div>
     );
   };

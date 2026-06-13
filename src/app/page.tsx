@@ -5,9 +5,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import Dashboard from '@/components/dashboard/Dashboard';
 import TransactionsPage from '@/components/transactions/TransactionsPage';
-import LeaderboardPage from '@/components/leaderboard/LeaderboardPage';
 import RestaurantsPage from '@/components/restaurants/RestaurantsPage';
-import SquadPage from '@/components/squad/SquadPage';
+import SplitBillPage from '@/components/split/SplitBillPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 import LoginScreen from '@/components/auth/LoginScreen';
 import Onboarding from '@/components/auth/Onboarding';
@@ -111,7 +110,7 @@ export default function Home() {
               
               let persistedRoute = 'dashboard';
               const saved = typeof window !== 'undefined' ? localStorage.getItem('active_route') : null;
-              const validRoutes = ['dashboard', 'transactions', 'settings', 'restaurants', 'leaderboard', 'squad'];
+              const validRoutes = ['dashboard', 'transactions', 'settings', 'restaurants', 'split'];
               if (saved && validRoutes.includes(saved)) {
                 persistedRoute = saved;
               }
@@ -169,7 +168,7 @@ export default function Home() {
                 let persistedRoute = 'dashboard';
                 if (typeof window !== 'undefined') {
                   const saved = localStorage.getItem('active_route');
-                  const validRoutes = ['dashboard', 'transactions', 'settings', 'restaurants', 'leaderboard', 'squad'];
+                  const validRoutes = ['dashboard', 'transactions', 'settings', 'restaurants', 'split'];
                   if (saved && validRoutes.includes(saved)) {
                     persistedRoute = saved;
                   }
@@ -263,15 +262,10 @@ export default function Home() {
         return user ? <Dashboard key={refreshKey} user={user} onAdd={() => setAddOpen(true)} onEditBudget={() => setBudgetOpen(true)} onSeeAll={() => changeRoute('transactions')} /> : null;
       case 'transactions':
         return <TransactionsPage onAdd={() => setAddOpen(true)} refreshKey={refreshKey} />;
-      case 'leaderboard':
-        return <LeaderboardPage />;
+      case 'split':
+        return user ? <SplitBillPage user={user} /> : null;
       case 'restaurants':
         return user ? <RestaurantsPage user={user} /> : null;
-      case 'squad':
-      case 'squad-campaigns':
-      case 'squad-duels':
-      case 'squad-members':
-        return user ? <SquadPage user={user} subRoute={route === 'squad' || route === 'squad-campaigns' ? 'campaigns' : route === 'squad-duels' ? 'duels' : 'members'} /> : null;
       case 'settings':
         return user ? <SettingsPage user={user} onLogout={() => changeRoute('login')} onProfileUpdate={() => setProfileRefreshKey(k => k + 1)} /> : null;
       default:
@@ -280,11 +274,10 @@ export default function Home() {
   };
 
   const getTitle = () => {
-    if (route?.startsWith('squad')) return t('nav.squad');
     switch (route) {
       case 'dashboard': return t('nav.dashboard');
       case 'transactions': return t('nav.transactions');
-      case 'leaderboard': return t('nav.leaderboard');
+      case 'split': return t('nav.split');
       case 'restaurants': return t('nav.restaurants');
       case 'settings': return t('nav.settings');
       default: return 'QUẢN LÝ CHI TIÊU';
@@ -292,11 +285,6 @@ export default function Home() {
   };
 
   const getBreadcrumbs = () => {
-    if (route?.startsWith('squad-')) {
-      const sub = route.split('-')[1];
-      const subLabel = sub === 'campaigns' ? t('nav.campaigns') : sub === 'duels' ? t('nav.duels') : t('nav.members');
-      return [subLabel];
-    }
     return [];
   };
 

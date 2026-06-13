@@ -10,33 +10,61 @@ interface RandomResultModalProps {
     dish: any;
     restaurant: any;
   } | null;
+  allDishes: any[];
   squadName?: string;
-  onRetry: (mode: 'any' | 'squad', subMode?: 'all' | 'res') => void;
+  onRetry: (mode: 'any' | 'squad', currentDish?: any) => void;
 }
 
-const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, result, squadName, onRetry }) => {
+const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, result, allDishes, squadName, onRetry }) => {
   const [activeTab, setActiveTab] = useState<'any' | 'squad'>('any');
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [shuffleIndex, setShuffleIndex] = useState(0);
 
   useEffect(() => {
-    if (open && !result) {
-       onRetry(activeTab, 'all');
+    if (open) {
+      handleShuffle('any');
+    } else {
+      setIsShuffling(false);
     }
   }, [open]);
+
+  const handleShuffle = (mode: 'any' | 'squad') => {
+    setIsShuffling(true);
+    
+    const duration = 1500; 
+    const interval = 80;
+    let elapsed = 0;
+
+    const pool = mode === 'any' ? allDishes : (result?.dish?.dish_restaurants || []);
+
+    const timer = setInterval(() => {
+      elapsed += interval;
+      if (pool.length > 0) {
+        setShuffleIndex(prev => (prev + 1) % pool.length);
+      }
+      
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        setIsShuffling(false);
+        onRetry(mode, mode === 'squad' ? result?.dish : undefined);
+      }
+    }, interval);
+  };
 
   if (!open) return null;
 
   const handleRetry = () => {
-    onRetry(activeTab, 'all');
-  };
-
-  const handleRetryRes = () => {
-    onRetry(activeTab, 'res');
+    handleShuffle(activeTab);
   };
 
   const handleTabChange = (tab: 'any' | 'squad') => {
     setActiveTab(tab);
-    onRetry(tab, 'all');
+    handleShuffle(tab);
   };
+
+  // Logic to determine what to show during shuffle vs final
+  const currentPool = activeTab === 'any' ? allDishes : (result?.dish?.dish_restaurants || []);
+  const shuffleItem = currentPool[shuffleIndex];
 
   return (
     <div className="modal-overlay">
@@ -68,71 +96,79 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           </button>
         </div>
 
-        {result ? (
-          <div className="result-content">
-            <div className="dish-card">
-              <span className="label">{activeTab === 'any' ? 'MÓN' : 'QUÁN'}</span>
-              <div className="dish-main">
-                <span className="dish-emoji">{result.dish?.emoji || '🍜'}</span>
-                <h1 className="dish-name">{activeTab === 'any' ? result.dish?.name : result.restaurant?.name}</h1>
-              </div>
-            </div>
-
-            <div className="restaurant-card">
-              <span className="label">{activeTab === 'any' ? 'QUÁN GỢI Ý' : 'THÔNG TIN QUÁN'}</span>
-              <div className="res-info">
-                <h3 className="res-name">{result.restaurant?.name}</h3>
-                <div className="rating">
-                  {[...Array(5)].map((_, i) => (
-                    <Icon key={i} name="star" size={14} fill="#FFB800" color="#FFB800" />
-                  ))}
-                </div>
-                {result.restaurant?.address && (
-                  <div className="res-address">
-                    <Icon name="map-pin" size={14} />
-                    <span>{result.restaurant.address}</span>
+        <div className="result-area">
+          {activeTab === 'any' ? (
+            <div className={`result-content ${isShuffling ? 'shuffling' : ''}`}>
+               <div className="dish-card full-dish">
+                  <span className="label">MÓN NGẪU NHIÊN</span>
+                  <div className="dish-main">
+                    <span className="dish-emoji">{(isShuffling ? shuffleItem : result?.dish)?.emoji || '🍜'}</span>
+                    <h1 className="dish-name">{(isShuffling ? shuffleItem : result?.dish)?.name || 'Đang chọn...'}</h1>
                   </div>
-                )}
-                <div className="res-divider"></div>
-                {result.restaurant?.review && (
-                  <p className="res-review">{result.restaurant.review}</p>
-                )}
-                <div className="card-actions">
-                  <button className="directions-btn">
-                    <Icon name="map-pin" size={14} />
-                    <span>Chỉ đường</span>
-                  </button>
-                  {result.restaurant?.video_link && (
-                    <button 
-                      className="video-btn" 
-                      onClick={() => window.open(result.restaurant.video_link.startsWith('http') ? result.restaurant.video_link : `https://${result.restaurant.video_link}`, '_blank')}
-                    >
-                      <Icon name="play" size={14} color="#7C4DFF" />
-                      <span>Xem video</span>
-                    </button>
+               </div>
+               {!isShuffling && result?.dish && (
+                 <p style={{ textAlign: 'center', color: 'var(--t3)', fontSize: '13px', marginTop: '16px' }}>
+                   Bấm qua tab <b>Quán</b> để chọn địa điểm cho món này nhen!
+                 </p>
+               )}
+            </div>
+          ) : (
+            <div className={`result-content ${isShuffling ? 'shuffling' : ''}`}>
+              <div className="dish-card mini">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                   <span style={{ fontSize: '24px' }}>{result?.dish?.emoji || '🍽️'}</span>
+                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{result?.dish?.name}</h3>
+                </div>
+              </div>
+
+              <div className="restaurant-card">
+                <span className="label">QUÁN GỢI Ý</span>
+                <div className="res-info">
+                  <h3 className="res-name">{(isShuffling ? shuffleItem : result?.restaurant)?.name || 'Đang tìm quán...'}</h3>
+                  {!isShuffling && result?.restaurant && (
+                    <>
+                      <div className="rating">
+                        {[...Array(5)].map((_, i) => (
+                          <Icon 
+                            key={i} 
+                            name="star" 
+                            size={14} 
+                            fill={i < (result.restaurant.rating || 5) ? "#FFB800" : "none"} 
+                            color={i < (result.restaurant.rating || 5) ? "#FFB800" : "#E0E0E0"} 
+                          />
+                        ))}
+                      </div>
+                      {result.restaurant.address && (
+                        <div className="res-address">
+                          <Icon name="map-pin" size={14} />
+                          <span>{result.restaurant.address}</span>
+                        </div>
+                      )}
+                      <div className="res-divider"></div>
+                      {result.restaurant.review && (
+                        <p className="res-review">{result.restaurant.review}</p>
+                      )}
+                      <div className="card-actions">
+                        <button 
+                          className="directions-btn"
+                          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(result.restaurant.address)}`, '_blank')}
+                        >
+                          <Icon name="map-pin" size={14} />
+                          <span>Chỉ đường</span>
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="loading-state">
-             <div className="spinner"></div>
-             <p>Đang quay số...</p>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="modal-footer">
-          <button className="btn-retry" onClick={handleRetry}>
+          <button className="btn-retry" onClick={handleRetry} disabled={isShuffling}>
             <Icon name="sparkles" size={18} />
-            <span>Lắc lại</span>
-          </button>
-          <button className="btn-res" onClick={handleRetryRes}>
-            <span>Đổi quán</span>
-          </button>
-          <button className="btn-open" onClick={onClose}>
-            <Icon name="check" size={18} />
-            <span>Mở quán này</span>
+            <span>{isShuffling ? 'Đang xoay...' : 'Lắc lại'}</span>
           </button>
         </div>
       </div>
@@ -220,11 +256,25 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
         .tab-btn .emoji {
           font-size: 16px;
         }
+        .result-area {
+          min-height: 320px;
+          display: flex;
+          flex-direction: column;
+        }
         .result-content {
           padding: 0 24px 24px;
           display: flex;
           flex-direction: column;
           gap: 16px;
+          animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .result-content.shuffling {
+          opacity: 0.8;
+          transform: scale(0.98);
         }
         .label {
           font-size: 11px;
@@ -241,6 +291,11 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           padding: 20px;
           border: 1px solid #F0F0F3;
         }
+        .dish-card.mini {
+          padding: 12px 16px;
+          background: #fff;
+          border-style: dashed;
+        }
         .dish-main {
           display: flex;
           flex-direction: column;
@@ -248,7 +303,7 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           gap: 12px;
         }
         .dish-emoji {
-          font-size: 40px;
+          font-size: 48px;
           filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
         }
         .dish-name {
@@ -256,6 +311,7 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           font-weight: 800;
           color: #1A1A1A;
           margin: 0;
+          text-align: center;
         }
         .restaurant-card {
           border: 1px solid #F0F0F3;
@@ -272,6 +328,7 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           font-weight: 800;
           color: #1A1A1A;
           margin: 0 0 8px;
+          text-align: center;
         }
         .rating {
           display: flex;
@@ -318,26 +375,13 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           gap: 12px;
           justify-content: center;
         }
-        .video-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          background: #fff;
-          border: 1.5px solid #F5F2FF;
-          border-radius: 10px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #7C4DFF;
-          cursor: pointer;
-        }
         .modal-footer {
           padding: 20px 24px 24px;
           display: flex;
           gap: 12px;
           border-top: 1px solid #F0F0F3;
         }
-        .btn-retry, .btn-open {
+        .btn-retry {
           flex: 1;
           display: flex;
           align-items: center;
@@ -349,46 +393,9 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
-        }
-        .btn-res {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 14px 20px;
-          border-radius: 14px;
-          border: 1.5px solid #F0F0F3;
-          background: #fff;
-          font-size: 15px;
-          font-weight: 700;
-          color: #1A1A1A;
-          cursor: pointer;
-        }
-        .btn-retry {
-          background: #fff;
-          border: 1.5px solid #F0F0F3;
-          color: #1A1A1A;
-        }
-        .btn-open {
           background: #7C4DFF;
           border: none;
           color: #fff;
-        }
-        .loading-state {
-          padding: 60px 24px;
-          text-align: center;
-          color: #666;
-        }
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #F0F0F3;
-          border-top-color: #7C4DFF;
-          border-radius: 50%;
-          margin: 0 auto 16px;
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
