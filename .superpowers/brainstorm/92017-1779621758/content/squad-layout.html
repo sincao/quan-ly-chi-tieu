@@ -1,0 +1,56 @@
+<h2>Đề xuất giao dịch Squad mới</h2>
+<p class="subtitle">Thống nhất tiêu đề và thêm tabs điều hướng</p>
+
+<div class="mockup">
+  <div class="mockup-header">SquadPage.tsx</div>
+  <div class="mockup-body" style="background: var(--bg); padding: 24px;">
+    
+    <!-- Unified Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+      <div>
+        <h1 style="font-size: 26px; font-weight: 800; margin-bottom: 4px;">Nhóm tiết kiệm</h1>
+        <p style="color: var(--t2); font-size: 13px;">Cùng tiết kiệm, cùng bị roast 💀</p>
+      </div>
+      <button class="mock-button" style="width: 36px; height: 36px; padding: 0; display: grid; place-items: center; border-radius: 8px;">
+        <span style="font-size: 20px;">+</span>
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="page-tabs">
+      <button class="active">
+        Chiến dịch <span class="count">2</span>
+      </button>
+      <button>
+        Duel 1v1 <span class="count">2</span>
+      </button>
+      <button>
+        Thành viên
+      </button>
+    </div>
+
+    <!-- Content Area Placeholder -->
+    <div class="placeholder" style="height: 300px; display: grid; place-items: center; border-style: dashed;">
+      <p style="color: var(--t4);">Nội dung tương ứng với Tab (Chiến dịch / Duel / Thành viên)</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <h3>Các thay đổi chính:</h3>
+  <ul>
+    <li>Thống nhất tiêu đề <strong>"Nhóm tiết kiệm"</strong> cho mọi màn hình con của Squad.</li>
+    <li>Sử dụng class <code>page-tabs</code> có sẵn để tạo thanh điều hướng 3 tab.</li>
+    <li>Hiển thị số lượng (count) cho tab Chiến dịch và Duel.</li>
+    <li>Nút <strong>"+"</strong> ở góc trên bên phải sẽ thay đổi hành động tùy theo Tab đang chọn (Tạo chiến dịch / Tạo Duel / Thêm bạn).</li>
+  </ul>
+</div>
+
+<div class="options" data-choice="approved" onclick="toggleSelect(this)">
+  <div class="letter">✓</div>
+  <div class="content">
+    <h3>Đồng ý với thiết kế này</h3>
+    <p>Tiến hành triển khai code dựa trên mockup này.</p>
+  </div>
+</div>

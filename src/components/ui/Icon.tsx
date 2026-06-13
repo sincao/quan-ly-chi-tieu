@@ -4,7 +4,7 @@ export type IconName =
   | 'home' | 'list' | 'trophy' | 'users' | 'settings' | 'plus' | 'x' | 'search' 
   | 'download' | 'arrow-right' | 'piggy' | 'zap' | 'edit' | 'trash' | 'user' 
   | 'chevron-down' | 'lock' | 'bell' | 'camera' | 'calendar' | 'target' | 'log-out' 
-  | 'more-horizontal' | 'info' | 'eye' | 'eye-off' | 'check' | 'arrow-left' | 'mail' | 'lock-icon' | 'map-pin' | 'dice' | 'refresh-cw';
+  | 'more-horizontal' | 'info' | 'eye' | 'eye-off' | 'check' | 'arrow-left' | 'mail' | 'lock-icon' | 'map-pin' | 'dice' | 'refresh-cw' | 'star' | 'sparkles';
 
 interface IconProps extends Omit<React.SVGProps<SVGSVGElement>, 'stroke'> {
   name: IconName;
@@ -60,6 +60,8 @@ const Icon: React.FC<IconProps> = ({ name, size = 16, style, stroke, ...props })
     case 'map-pin': return <svg {...s}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>;
     case 'dice': return <svg {...s}><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><path d="M7 7h.01" /><path d="M17 7h.01" /><path d="M7 17h.01" /><path d="M17 17h.01" /><path d="M12 12h.01" /></svg>;
     case 'refresh-cw': return <svg {...s}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></svg>;
+    case 'star': return <svg {...s}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>;
+    case 'sparkles': return <svg {...s}><path d="m12 3 1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" /></svg>;
     default: return <svg {...s}><circle cx="12" cy="12" r="10" /></svg>;
   }
 };

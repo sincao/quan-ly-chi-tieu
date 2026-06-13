@@ -1,3 +1,44 @@
+# Random Food Picker UI Update Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Update the Random Food Picker UI to match the design provided in the image, including tabs for "Any dish" and "Squad specific" results, and a rich card layout for the selected dish and restaurant.
+
+**Architecture:** 
+- Enhance `RandomResultModal.tsx` with a multi-tab layout and styled cards.
+- Update `RestaurantsPage.tsx` to fetch squad data and pass it to the modal.
+- Implement auto-randomization logic when opening the modal or switching tabs.
+
+**Tech Stack:** React, Next.js, TypeScript, Lucide Icons (via Icon component), CSS-in-JS (style jsx).
+
+---
+
+### Task 1: Update RandomResultModal UI
+
+**Files:**
+- Modify: `src/components/restaurants/RandomResultModal.tsx`
+
+- [ ] **Step 1: Update props and add state for tabs**
+
+Modify the interface and component state:
+```tsx
+interface RandomResultModalProps {
+  open: boolean;
+  onClose: () => void;
+  result: {
+    dish: any;
+    restaurant: any;
+  } | null;
+  squadName?: string;
+  onRetry: (mode: 'any' | 'squad') => void;
+}
+```
+
+- [ ] **Step 2: Implement the new UI layout**
+
+Replace the content of `RandomResultModal` with the styled version from the image. Use the existing `Icon` component.
+
+```tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -347,3 +388,94 @@ const RandomResultModal: React.FC<RandomResultModalProps> = ({ open, onClose, re
 };
 
 export default RandomResultModal;
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/components/restaurants/RandomResultModal.tsx
+git commit -m "feat: update RandomResultModal UI to match design"
+```
+
+---
+
+### Task 2: Update RestaurantsPage Data and Logic
+
+**Files:**
+- Modify: `src/components/restaurants/RestaurantsPage.tsx`
+
+- [ ] **Step 1: Fetch squads/campaigns for context**
+
+Add `campaigns` state and fetch in `useEffect`:
+```tsx
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDishes();
+    const fetchSquads = async () => {
+      const { campaigns: campData } = await getSquadData(user.id);
+      setCampaigns(campData);
+    };
+    fetchSquads();
+  }, [user.id]);
+```
+
+- [ ] **Step 2: Update random handlers to pass dish info**
+
+Modify `handleGlobalRandom` and `handleRandomRes`:
+```tsx
+  const handleRandomAction = (mode: 'any' | 'squad') => {
+    let sourceDishes = dishes;
+    
+    // If squad mode, we might want to filter or just use all for now 
+    // but the image implies a specific squad "Phở"
+    // For now, let's just pick from all, but we can refine later
+    
+    const allRestaurants: { dish: any, restaurant: any }[] = sourceDishes.flatMap(d => 
+      (d.dish_restaurants || []).map((r: any) => ({ dish: d, restaurant: r }))
+    );
+
+    if (allRestaurants.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * allRestaurants.length);
+    setRandomResult(allRestaurants[randomIndex]);
+    setRandomModalOpen(true);
+  };
+```
+
+- [ ] **Step 3: Update Modal component call**
+
+Pass `result` (object with dish and restaurant) and `squadName`:
+```tsx
+      <RandomResultModal 
+        open={randomModalOpen} 
+        onClose={() => setRandomModalOpen(false)} 
+        result={randomResult} 
+        squadName={campaigns.length > 0 ? campaigns[0].name : undefined}
+        onRetry={handleRandomAction} 
+      />
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/components/restaurants/RestaurantsPage.tsx
+git commit -m "feat: update random logic and pass squad context to modal"
+```
+
+---
+
+### Task 3: Final Polish and Verification
+
+- [ ] **Step 1: Verify the UI matches the image**
+
+Check colors, spacing, and icons. Ensure the "Lắc lại" button re-randomizes.
+
+- [ ] **Step 2: Add auto-randomize when clicking "Ăn gì hôm nay?"**
+
+Ensure `handleRandomAction` is called immediately.
+
+- [ ] **Step 3: Commit final changes**
+
+```bash
+git commit -m "chore: final polish for random food picker"
+```

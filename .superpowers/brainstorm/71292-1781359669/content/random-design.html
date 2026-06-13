@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thiết kế Tính năng Random - Quản Lý Chi Tiêu</title>
+    <style>
+        :root {
+            --ink: #1a1a1a;
+            --t2: #4a4a4a;
+            --t3: #7a7a7a;
+            --line: #e0e0e0;
+            --bg: #f8f9fa;
+            --bg-2: #ffffff;
+            --purple-100: #f3e8ff;
+            --purple-400: #c084fc;
+            --purple-700: #7e22ce;
+            --primary: var(--purple-700);
+            --rose: #e11d48;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--ink);
+            margin: 0;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+        p.subtitle { color: var(--t3); font-size: 14px; margin-bottom: 32px; }
+
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .card:hover {
+            border-color: var(--purple-400);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .card.selected {
+            border-color: var(--primary);
+            background: var(--purple-100);
+        }
+
+        .card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-desc {
+            color: var(--t2);
+            font-size: 14px;
+        }
+
+        .mockup-preview {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg);
+            border-radius: 12px;
+            border: 1px dashed var(--line);
+        }
+
+        .header-strip {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: white; border: 1px solid var(--line); color: var(--ink); }
+        .btn-random { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+        .modal-overlay {
+            background: rgba(0,0,0,0.4);
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+        }
+
+        .modal {
+            background: white;
+            width: 80%;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .dice-anim {
+            font-size: 48px;
+            margin-bottom: 16px;
+            animation: rotate 1s infinite linear;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            75% { transform: rotate(-15deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .indicator {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ink);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 32px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .selected-text { color: var(--purple-400); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vị trí đặt nút "Random"</h1>
+        <p class="subtitle">Chọn một phương án để tiếp tục thảo luận.</p>
+
+        <div class="cards">
+            <!-- Option 1: Header Button -->
+            <div class="card" data-choice="header-button" onclick="toggleSelect(this)">
+                <div class="card-title">
+                    <span>🎲</span>
+                    Nút Random trong Header
+                </div>
+                <div class="card-desc">
+                    Đặt một nút "Random" màu vàng nổi bật cạnh nút "Thêm món ăn". Phù hợp để làm tính năng chính.
+                </div>
+                <div class="mockup-preview">
+                    <div class="header-strip">
+                        <div style="font-weight: 800;">Quán ăn</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-random">🎲 Random</button>
+                            <button class="btn btn-primary">+ Thêm món</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Option 2: Contextual Dice Icons -->
+            <div class="card" data-choice="contextual-icons" onclick="toggleSelect(this)">
+                <div class="card-title">
+                    <span>🎯</span>
+                    Icon Xúc sắc theo ngữ cảnh
+                </div>
+                <div class="card-desc">
+                    Đặt icon 🎲 nhỏ ở tiêu đề danh sách món và danh sách quán. Giúp user hiểu rõ đang random cái gì.
+                </div>
+                <div class="mockup-preview">
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px;">
+                        <div style="border: 1px solid var(--line); border-radius: 8px; padding: 8px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--line); margin-bottom: 4px;">
+                                <span>Món ăn</span>
+                                <span style="cursor: pointer;">🎲</span>
+                            </div>
+                            <div style="height: 40px; background: #eee; border-radius: 4px;"></div>
+                        </div>
+                        <div style="border: 1px solid var(--line); border-radius: 8px; padding: 8px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--line); margin-bottom: 4px;">
+                                <span>Địa điểm</span>
+                                <span style="cursor: pointer;">🎲</span>
+                            </div>
+                            <div style="height: 40px; background: #eee; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Option 3: Magic Modal Experience -->
+            <div class="card" data-choice="magic-modal" onclick="toggleSelect(this)">
+                <div class="card-title">
+                    <span>✨</span>
+                    Trải nghiệm Modal "Hôm nay ăn gì?"
+                </div>
+                <div class="card-desc">
+                    Khi bấm Random, hiện một Modal lớn với hiệu ứng xúc sắc xoay, tạo cảm giác thú vị và hồi hộp.
+                </div>
+                <div class="mockup-preview" style="position: relative; height: 140px; overflow: hidden;">
+                    <div class="header-strip">
+                        <div style="font-weight: 800;">Quán ăn</div>
+                        <button class="btn btn-random">🎲 Random</button>
+                    </div>
+                    <div class="modal-overlay">
+                        <div class="modal">
+                            <div class="dice-anim">🎲</div>
+                            <div style="font-size: 12px; color: var(--t3);">Đang chọn món ngon cho bạn...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="indicator" id="indicator">
+        <span id="indicator-text">Chọn một phương án ở trên, sau đó quay lại terminal</span>
+    </div>
+
+    <script src="../helper.js"></script>
+</body>
+</html>
