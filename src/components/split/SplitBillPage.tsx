@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Icon from '@/components/ui/Icon';
 import { createClient } from '@/lib/supabase/client';
-import { getTrips, getTripDetails, addTrip, addTripMember, addTripExpense } from '@/lib/supabase/queries';
+import { getTrips, getTripDetails, addTrip, addTripMember, addTripExpense, deleteTrip } from '@/lib/supabase/queries';
 import { User } from '@supabase/supabase-js';
 import CreateTripModal from './CreateTripModal';
 import AddExpenseModal from './AddExpenseModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 interface SplitBillPageProps {
   user: User;
@@ -21,6 +22,8 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchTrips = async (newId?: string) => {
     setLoading(true);
@@ -31,8 +34,11 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
       if (data) {
         setTrips(data);
         if (data.length > 0) {
-          const targetId = newId || data[0].id;
+          const targetId = newId || (data.some(t => t.id === activeTripId) ? activeTripId : data[0].id);
           setActiveTripId(targetId);
+        } else {
+          setActiveTripId(null);
+          setTripDetails(null);
         }
       }
     } catch (err: any) {
@@ -71,6 +77,24 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
       fetchTripDetails(activeTripId);
     }
   }, [activeTripId]);
+
+  const handleDeleteTrip = async () => {
+    if (!activeTripId) return;
+    setDeleteLoading(true);
+    try {
+      const { error } = await deleteTrip(activeTripId);
+      if (error) throw error;
+      setDeleteModalOpen(false);
+      // Reset activeTripId so fetchTrips can pick the next one
+      setActiveTripId(null);
+      await fetchTrips();
+    } catch (err: any) {
+      console.error('handleDeleteTrip error:', err);
+      setFetchError(err.message || 'Lỗi khi xóa chuyến đi');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN').format(amount) + 'đ';
@@ -221,7 +245,7 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
       ) : tripData ? (
         <>
           {/* Hero Card */}
-          <div style={{ 
+          <div className="hero-card" style={{ 
             background: 'linear-gradient(135deg, #7C4DFF 0%, #6938E8 100%)', 
             borderRadius: '16px', 
             padding: '24px',
@@ -233,7 +257,30 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
             boxShadow: '0 8px 32px rgba(124, 77, 255, 0.15)'
           }}>
             <div>
-              <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '6px' }}>{tripData.name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: 800 }}>{tripData.name}</h2>
+                <button 
+                  onClick={() => setDeleteModalOpen(true)}
+                  style={{
+                    background: 'rgba(255,255,255,0.15)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Xóa chuyến đi"
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                >
+                  <Icon name="trash" size={16} />
+                </button>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px', opacity: 0.85, fontSize: '13px' }}>
                 <Icon name="home" size={14} />
                 <span>{tripData.start_date || 'N/A'}</span>
@@ -313,6 +360,7 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
               {transfers.length > 0 ? transfers.map((t: any, i: number) => (
                 <div 
                   key={i} 
+                  className="transfer-item"
                   style={{ 
                     padding: '14px 24px', 
                     display: 'flex', 
@@ -353,7 +401,7 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
                <p style={{ fontSize: '12px', color: 'var(--t3)' }}>Số dương = nhận lại · số âm = trả thêm</p>
              </div>
              
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+             <div className="balances-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
                 {balances.map((b: any, i: number) => (
                   <div key={i} className="card" style={{ 
                     padding: '16px', 
@@ -399,7 +447,7 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
                 <button className="btn btn-outline btn-sm">Xem tất cả</button>
               </div>
             </div>
-            <div className="card-body tight" style={{ padding: 0 }}>
+            <div className="card-body tight tbl-wrapper" style={{ padding: 0 }}>
               <table className="tbl">
                 <thead>
                   <tr>
@@ -452,6 +500,18 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
         />
       )}
 
+      <ConfirmModal
+        open={isDeleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteTrip}
+        title="Xóa chuyến đi?"
+        message={`Bạn có chắc chắn muốn xóa chuyến đi "${tripData?.name}" không? Hành động này sẽ xóa tất cả các khoản chi liên quan và không thể hoàn tác.`}
+        confirmText="Xóa chuyến đi"
+        cancelText="Hủy"
+        type="danger"
+        loading={deleteLoading}
+      />
+
       <style jsx>{`
         .avatar {
           width: 32px;
@@ -474,6 +534,39 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
         .trips-tabs::-webkit-scrollbar-thumb {
           background: var(--line);
           border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+          .hero-card {
+            flex-direction: column;
+            gap: 20px;
+            text-align: left;
+          }
+          .hero-card > div:last-child {
+            text-align: left !important;
+          }
+          .hero-card > div:last-child button {
+            margin-left: 0 !important;
+          }
+          .balances-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .tbl-wrapper {
+            overflow-x: auto;
+            display: block;
+          }
+          .tbl {
+            white-space: nowrap;
+          }
+          .transfer-item {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 12px;
+          }
+          .transfer-item > div:last-child {
+            width: 100%;
+            justify-content: space-between;
+          }
         }
       `}</style>
     </div>

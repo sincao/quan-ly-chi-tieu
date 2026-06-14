@@ -89,7 +89,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
   return (
     <aside className={'sidebar' + (open ? ' open' : '')}>
       <div className="sb-brand" style={{ padding: '24px 16px' }}>
-        <div className="sb-mark"><Icon name="zap" size={16} /></div>
+        <div className="sb-mark" style={{ background: 'transparent', width: '32px', height: '32px', overflow: 'hidden' }}>
+          <img src="/favicon-32x32.png" alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        </div>
         <div>
           <div className="sb-name">QUẢN LÝ CHI TIÊU</div>
           <div className="sb-sub">stop burning $$</div>

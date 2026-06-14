@@ -623,3 +623,12 @@ export async function addTripExpense(expense: { trip_id: string; payer_id: strin
     .single();
   return { data, error };
 }
+
+export async function deleteTrip(tripId: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('trips')
+    .delete()
+    .eq('id', tripId);
+  return { error };
+}

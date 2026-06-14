@@ -227,7 +227,7 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
 
   return (
     <div className="main-inner">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div className="header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--ink)', marginBottom: '4px' }}>{t('nav.restaurants')}</h1>
           <p style={{ fontSize: '14px', color: 'var(--t3)', fontWeight: 500 }}>
@@ -525,6 +525,27 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
         .btn-xem:hover {
           background: #7C4DFF;
           color: #fff;
+        }
+
+        @media (max-width: 768px) {
+          .dash-row.r-1-2 {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 20px !important;
+          }
+          .res-table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+          }
+          .res-table-wrapper {
+            max-height: none !important;
+          }
+          .header-container {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 16px;
+          }
         }
       `}</style>
     </div>
