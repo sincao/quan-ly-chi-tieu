@@ -53,14 +53,17 @@ const AddRestaurantModal: React.FC<AddRestaurantModalProps> = ({ open, onClose, 
     setLoading(true);
     try {
       if (editRes) {
-        await updateRestaurant(editRes.id, { name, address, video_link: videoLink, review, rating });
+        const { error: err } = await updateRestaurant(editRes.id, { name, address, video_link: videoLink, review, rating });
+        if (err) throw err;
       } else {
-        await addRestaurant({ dish_id: dishId, name, address, video_link: videoLink, review, rating });
+        const { error: err } = await addRestaurant({ dish_id: dishId, name, address, video_link: videoLink, review, rating });
+        if (err) throw err;
       }
       onSuccess();
       onClose();
-    } catch (err) {
-      setError(t('common.error'));
+    } catch (err: any) {
+      console.error('handleSave error:', err);
+      setError(err.message || t('common.error'));
     } finally {
       setLoading(false);
     }

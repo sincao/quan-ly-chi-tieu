@@ -93,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRoute, setRoute, open, onClose
           <img src="/favicon-32x32.png" alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <div>
-          <div className="sb-name">QUẢN LÝ CHI TIÊU</div>
+          <div className="sb-name">POCKETHUB</div>
           <div className="sb-sub">stop burning $$</div>
         </div>
       </div>

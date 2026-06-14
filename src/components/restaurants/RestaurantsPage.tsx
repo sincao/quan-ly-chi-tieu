@@ -9,6 +9,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import AddDishModal from './AddDishModal';
 import AddRestaurantModal from './AddRestaurantModal';
 import RandomResultModal from './RandomResultModal';
+import RestaurantDetailModal from './RestaurantDetailModal';
 
 interface RestaurantsPageProps {
   user: User;
@@ -29,7 +30,9 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
   const [isDishModalOpen, setDishModalOpen] = useState(false);
   const [isResModalOpen, setResModalOpen] = useState(false);
   const [randomModalOpen, setRandomModalOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [randomResult, setRandomResult] = useState<{ dish: any, restaurant: any } | null>(null);
+  const [selectedResForDetail, setSelectedResForDetail] = useState<any>(null);
   const [editDish, setEditDish] = useState<any>(null);
   const [editRes, setEditRes] = useState<any>(null);
 
@@ -47,20 +50,33 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
     type: 'primary'
   });
 
-  const fetchDishes = async (autoSelect = false) => {
+  const fetchDishes = async (autoSelect = false, forceId?: string) => {
     setLoading(true);
-    const { data } = await getDishes(user.id);
-    if (data) {
-      setDishes(data);
-      if (data.length > 0) {
-        if (autoSelect || !selectedDishId || !data.find(d => d.id === selectedDishId)) {
-          setSelectedDishId(data[0].id);
+    try {
+      const { data } = await getDishes(user.id);
+      if (data) {
+        setDishes(data);
+        if (data.length > 0) {
+          // If we have a forceId, use it. Otherwise keep current selection or pick first.
+          const currentId = forceId || selectedDishId;
+          const exists = data.find(d => d.id === currentId);
+          
+          if (autoSelect || forceId || !exists) {
+            setSelectedDishId(exists ? exists.id : data[0].id);
+          } else {
+            // Even if we don't change the ID, we want to ensure selectedDish (which is computed)
+            // will pick up the NEW data from the 'dishes' array.
+            // React state update for 'dishes' will trigger this re-render.
+          }
+        } else {
+          setSelectedDishId(null);
         }
-      } else {
-        setSelectedDishId(null);
       }
+    } catch (err) {
+      console.error('fetchDishes error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -384,15 +400,15 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
                     <tr>
                       <th>QUÁN</th>
                       <th>ĐỊA CHỈ</th>
-                      <th>VIDEO</th>
-                      <th>REVIEW CỦA BẠN</th>
-                      <th>ĐÁNH GIÁ</th>
-                      <th></th>
+                      <th className="hide-mobile">VIDEO</th>
+                      <th className="hide-mobile">REVIEW CỦA BẠN</th>
+                      <th className="hide-mobile">ĐÁNH GIÁ</th>
+                      <th className="hide-mobile"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRestaurants.map((res: any) => (
-                      <tr key={res.id}>
+                      <tr key={res.id} onClick={() => { setSelectedResForDetail(res); setDetailModalOpen(true); }} style={{ cursor: 'pointer' }}>
                         <td style={{ fontWeight: 800 }}>{res.name}</td>
                         <td>
                           {res.address && (
@@ -402,19 +418,19 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
                             </div>
                           )}
                         </td>
-                        <td>
+                        <td className="hide-mobile">
                           {res.video_link ? (
                             <button 
                               className="btn-xem"
-                              onClick={() => window.open(res.video_link.startsWith('http') ? res.video_link : `https://${res.video_link}`, '_blank')}
+                              onClick={(e) => { e.stopPropagation(); window.open(res.video_link.startsWith('http') ? res.video_link : `https://${res.video_link}`, '_blank'); }}
                             >
                               <Icon name="play" size={12} />
                               <span>Xem</span>
                             </button>
                           ) : '-'}
                         </td>
-                        <td style={{ color: 'var(--t3)', fontSize: '13px' }}>{res.review || '-'}</td>
-                        <td>
+                        <td className="hide-mobile" style={{ color: 'var(--t3)', fontSize: '13px' }}>{res.review || '-'}</td>
+                        <td className="hide-mobile">
                           <div style={{ display: 'flex', gap: '2px' }}>
                             {[...Array(5)].map((_, i) => (
                               <Icon 
@@ -427,10 +443,10 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
                             ))}
                           </div>
                         </td>
-                        <td>
+                        <td className="hide-mobile">
                           <div style={{ display: 'flex', gap: '4px' }}>
-                            <button className="icon-btn sm" onClick={() => handleEditRes(res)}><Icon name="edit" size={14} /></button>
-                            <button className="icon-btn sm" onClick={() => handleDeleteRes(res)} style={{ color: 'var(--rose)' }}><Icon name="trash" size={14} /></button>
+                            <button className="icon-btn sm" onClick={(e) => { e.stopPropagation(); handleEditRes(res); }}><Icon name="edit" size={14} /></button>
+                            <button className="icon-btn sm" onClick={(e) => { e.stopPropagation(); handleDeleteRes(res); }} style={{ color: 'var(--rose)' }}><Icon name="trash" size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -463,14 +479,14 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
         </div>
       </div>
 
-      <AddDishModal open={isDishModalOpen} onClose={() => setDishModalOpen(false)} userId={user.id} onSuccess={() => fetchDishes()} editDish={editDish} />
+      <AddDishModal open={isDishModalOpen} onClose={() => setDishModalOpen(false)} userId={user.id} onSuccess={(newId) => fetchDishes(true, newId)} editDish={editDish} />
       {selectedDishId && (
         <AddRestaurantModal 
           open={isResModalOpen} 
           onClose={() => setResModalOpen(false)} 
           dishId={selectedDishId} 
           dishName={selectedDish?.name}
-          onSuccess={() => fetchDishes()} 
+          onSuccess={() => fetchDishes(false, selectedDishId)} 
           editRes={editRes} 
         />
       )}
@@ -481,6 +497,14 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
         allDishes={dishes}
         squadName={campaigns.length > 0 ? campaigns[0].name : undefined}
         onRetry={handleRetry}
+      />
+      <RestaurantDetailModal 
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        restaurant={selectedResForDetail}
+        dishName={selectedDish?.name}
+        onEdit={() => handleEditRes(selectedResForDetail)}
+        onDelete={() => handleDeleteRes(selectedResForDetail)}
       />
       <ConfirmModal open={confirm.open} title={confirm.title} message={confirm.message} type={confirm.type} onConfirm={confirm.onConfirm} onClose={() => setConfirm(c => ({ ...c, open: false }))} />
 
@@ -536,12 +560,27 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
             margin-bottom: 20px;
           }
           .res-table {
-            display: block;
-            overflow-x: auto;
-            white-space: nowrap;
+            display: table !important; /* Back to table layout for full width */
+            width: 100% !important;
+            table-layout: fixed;
+          }
+          .res-table th, .res-table td {
+            padding: 12px 8px !important;
+          }
+          .res-table th:first-child, .res-table td:first-child {
+            width: 35%;
+          }
+          .res-table th:nth-child(2), .res-table td:nth-child(2) {
+            width: 65%;
+          }
+          .res-table td {
+            white-space: normal !important; /* Allow address to wrap if needed */
+            word-break: break-word;
+            font-size: 13px !important;
           }
           .res-table-wrapper {
             max-height: none !important;
+            overflow-x: hidden !important; /* No need for horizontal scroll if we use table-layout fixed */
           }
           .header-container {
             display: block !important;
@@ -558,6 +597,9 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
             justify-content: center !important;
             padding: 14px !important;
             font-size: 16px !important;
+          }
+          .hide-mobile {
+            display: none !important;
           }
           :global(.main-inner) {
             padding: 16px 12px !important;

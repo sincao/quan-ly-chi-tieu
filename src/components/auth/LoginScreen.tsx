@@ -107,7 +107,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <div className="auth-art-bolt" style={{ background: 'transparent', overflow: 'hidden' }}>
               <img src="/logo-128.png" alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <h1>Quản Lý<br />Chi Tiêu</h1>
+            <h1>PocketHub</h1>
             <p className="tag">{t('auth.tagline')}</p>
           </div>
           <div className="quote">{t('auth.quote')}</div>

@@ -9,7 +9,7 @@ interface AddDishModalProps {
   open: boolean;
   onClose: () => void;
   userId: string;
-  onSuccess: () => void;
+  onSuccess: (id?: string) => void;
   editDish?: any;
 }
 
@@ -44,15 +44,20 @@ const AddDishModal: React.FC<AddDishModalProps> = ({ open, onClose, userId, onSu
     }
     setLoading(true);
     try {
+      let result;
       if (editDish) {
-        await updateDish(editDish.id, { name, emoji });
+        result = await updateDish(editDish.id, { name, emoji });
       } else {
-        await addDish(userId, { name, emoji });
+        result = await addDish(userId, { name, emoji });
       }
-      onSuccess();
+      
+      if (result.error) throw result.error;
+      
+      onSuccess(result.data?.id);
       onClose();
-    } catch (err) {
-      setError(t('common.error'));
+    } catch (err: any) {
+      console.error('handleSave error:', err);
+      setError(err.message || t('common.error'));
     } finally {
       setLoading(false);
     }

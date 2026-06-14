@@ -280,7 +280,7 @@ export default function Home() {
       case 'split': return t('nav.split');
       case 'restaurants': return t('nav.restaurants');
       case 'settings': return t('nav.settings');
-      default: return 'QUẢN LÝ CHI TIÊU';
+      default: return 'POCKETHUB';
     }
   };
 

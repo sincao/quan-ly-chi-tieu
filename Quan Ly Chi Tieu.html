@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản Lý Chi Tiêu – Web App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles-v2.css">
+</head>
+<body>
+  <template id="__bundler_thumbnail" data-bg-color="#7C4DFF">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#7C4DFF"/>
+      <g transform="translate(440, 230)">
+        <rect width="320" height="320" rx="68" fill="rgba(255,255,255,0.16)"/>
+        <polygon points="160,70 196,150 124,150 172,230 116,230 160,330 138,230 188,230 152,150 200,150" fill="#fff"/>
+      </g>
+      <text x="600" y="640" text-anchor="middle" fill="#fff" font-family="Be Vietnam Pro, sans-serif" font-size="46" font-weight="800" letter-spacing="6">QUẢN LÝ CHI TIÊU</text>
+      <text x="600" y="690" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-family="Be Vietnam Pro, sans-serif" font-size="22" font-style="italic">stop burning $$</text>
+    </svg>
+  </template>
+
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="icons.jsx"></script>
+  <script type="text/babel" src="data-v2.jsx"></script>
+  <script type="text/babel" src="atoms-v2.jsx"></script>
+  <script type="text/babel" src="layout-v2.jsx"></script>
+  <script type="text/babel" src="screens-v2/auth.jsx"></script>
+  <script type="text/babel" src="screens-v2/dashboard.jsx"></script>
+  <script type="text/babel" src="screens-v2/transactions.jsx"></script>
+  <script type="text/babel" src="screens-v2/squad.jsx"></script>
+  <script type="text/babel" src="screens-v2/split.jsx"></script>
+  <script type="text/babel" src="screens-v2/leaderboard.jsx"></script>
+  <script type="text/babel" src="screens-v2/settings.jsx"></script>
+  <script type="text/babel" src="screens-v2/add-modal.jsx"></script>
+  <script type="text/babel" src="app-v2.jsx"></script>
+</body>
+</html>

@@ -46,8 +46,10 @@ const UpdatePasswordScreen: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     <div className="auth-shell">
       <div className="auth-art">
         <div>
-          <div className="auth-art-bolt"><Icon name="zap" size={28} /></div>
-          <h1>Quản Lý<br />Chi Tiêu</h1>
+          <div className="auth-art-bolt" style={{ background: 'transparent', overflow: 'hidden' }}>
+            <img src="/logo-128.png" alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+          <h1>PocketHub</h1>
           <p className="tag">{t('auth.tagline')}</p>
         </div>
         <div className="quote">{t('auth.quote')}</div>

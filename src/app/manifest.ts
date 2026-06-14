@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Quản Lý Chi Tiêu',
-    short_name: 'Chi Tiêu',
+    name: 'PocketHub',
+    short_name: 'PocketHub',
     description: 'Quản lý tài chính cá nhân thông minh',
     start_url: '/',
     display: 'standalone',
