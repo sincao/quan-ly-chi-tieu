@@ -64,6 +64,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           email,
           password: pw,
           options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
             data: {
               first_name: firstName,
               last_name: lastName,
@@ -107,7 +108,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <div className="auth-art-bolt" style={{ background: 'transparent', overflow: 'hidden' }}>
               <img src="/logo-128.png" alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <h1>PocketHub</h1>
+            <h1>Myboard</h1>
             <p className="tag">{t('auth.tagline')}</p>
           </div>
           <div className="quote">{t('auth.quote')}</div>
