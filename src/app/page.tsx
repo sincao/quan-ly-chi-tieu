@@ -315,11 +315,14 @@ export default function Home() {
           <Icon name="list" size={20} />
           <span>{t('nav.transactions')}</span>
         </button>
-        <div className="bottom-nav-fab-wrap">
-          <button className="bottom-nav-fab" onClick={() => setAddOpen(true)}>
-            <Icon name="plus" size={22} />
-          </button>
-        </div>
+        <button className={`bottom-nav-item${route === 'split' ? ' active' : ''}`} onClick={() => changeRoute('split')}>
+          <Icon name="users" size={20} />
+          <span>{t('nav.split')}</span>
+        </button>
+        <button className={`bottom-nav-item${route === 'restaurants' ? ' active' : ''}`} onClick={() => changeRoute('restaurants')}>
+          <Icon name="map-pin" size={20} />
+          <span>{t('nav.restaurants')}</span>
+        </button>
         <button className={`bottom-nav-item${route === 'settings' ? ' active' : ''}`} onClick={() => changeRoute('settings')}>
           <Icon name="user" size={20} />
           <span>{t('settings.profile')}</span>

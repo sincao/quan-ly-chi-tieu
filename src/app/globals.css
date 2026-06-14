@@ -960,21 +960,6 @@
     transition: color 0.12s;
   }
   .bottom-nav-item.active { color: var(--purple-600); }
-  .bottom-nav-fab-wrap {
-    flex: 1;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .bottom-nav-fab {
-    width: 52px; height: 52px; border-radius: 50%;
-    background: linear-gradient(135deg, #8B5CF6, #6938E8);
-    color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    border: none; cursor: pointer;
-    box-shadow: 0 4px 16px rgba(105, 56, 232, 0.45);
-    transform: translateY(-10px);
-    transition: transform 0.1s, box-shadow 0.1s;
-  }
-  .bottom-nav-fab:active { transform: translateY(-10px) scale(0.92); box-shadow: 0 2px 8px rgba(105, 56, 232, 0.3); }
 
   /* ============ SQUAD ============ */
   .squad-card { padding: 18px; }
