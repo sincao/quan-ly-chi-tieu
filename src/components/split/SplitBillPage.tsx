@@ -316,13 +316,14 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.8, marginBottom: '4px', letterSpacing: '0.05em' }}>TỔNG CHI PHÍ CHUYẾN ĐI</div>
               <div style={{ fontSize: '36px', fontWeight: 800, marginBottom: '8px', lineHeight: 1 }}>{formatCurrency(totalCost)}</div>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', fontSize: '12px', opacity: 0.9, marginBottom: '16px' }}>
+              <div className="stats-row" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', fontSize: '12px', opacity: 0.9, marginBottom: '16px' }}>
                 <span><b>{tripData.trip_expenses?.length}</b> khoản chi</span>
                 <span>·</span>
                 <span>TB <b>{formatCurrency(avgPerPerson)}</b>/người</span>
               </div>
               <button
                 onClick={() => setAddExpenseOpen(true)}
+                className="btn-add-expense"
                 style={{
                   background: '#fff',
                   color: '#7C4DFF',
@@ -539,14 +540,27 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
         @media (max-width: 768px) {
           .hero-card {
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
             text-align: left;
+            padding: 28px 20px !important;
           }
           .hero-card > div:last-child {
+            width: 100%;
             text-align: left !important;
+            border-top: 1px solid rgba(255,255,255,0.12);
+            padding-top: 24px;
           }
-          .hero-card > div:last-child button {
+          .stats-row {
+            justify-content: flex-start !important;
+            margin-bottom: 20px !important;
+          }
+          .btn-add-expense {
             margin-left: 0 !important;
+            width: 100%;
+            padding: 12px !important;
+            justify-content: center;
+            font-size: 14px !important;
+            height: 48px;
           }
           .balances-grid {
             grid-template-columns: 1fr 1fr !important;
