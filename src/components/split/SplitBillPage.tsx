@@ -245,116 +245,113 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
       ) : tripData ? (
         <>
           {/* Hero Card */}
-          <div className="hero-card" style={{ 
-            background: 'linear-gradient(135deg, #7C4DFF 0%, #6938E8 100%)', 
-            borderRadius: '16px', 
-            padding: '24px',
+          <div style={{ 
+            position: 'relative',
+            background: 'linear-gradient(135deg, #6938E8 0%, #5523C9 100%)', 
+            borderRadius: '24px', 
+            padding: '28px 24px',
             color: '#fff',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '24px',
-            boxShadow: '0 8px 32px rgba(124, 77, 255, 0.15)'
+            overflow: 'hidden',
+            marginBottom: '20px',
+            boxShadow: '0 12px 32px rgba(85, 35, 201, 0.15)'
           }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-                <h2 style={{ fontSize: '24px', fontWeight: 800 }}>{tripData.name}</h2>
-                <button 
-                  onClick={() => setDeleteModalOpen(true)}
-                  style={{
-                    background: 'rgba(255,255,255,0.15)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    width: '32px',
-                    height: '32px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  title="Xóa chuyến đi"
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                >
-                  <Icon name="trash" size={16} />
-                </button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px', opacity: 0.85, fontSize: '13px' }}>
-                <Icon name="home" size={14} />
-                <span>{tripData.start_date || 'N/A'}</span>
+            <div style={{
+              position: 'absolute',
+              top: '-80px',
+              right: '-60px',
+              width: '280px',
+              height: '280px',
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.06)',
+              pointerEvents: 'none'
+            }} />
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', opacity: 0.9, marginBottom: '20px' }}>
+                <Icon name="calendar" size={16} />
+                <span>{tripData.start_date || 'N/A'} {tripData.end_date ? `- ${tripData.end_date}` : ''}</span>
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ display: 'flex', marginLeft: '4px' }}>
-                  {tripData.trip_members?.slice(0, 5).map((m: any, i: number) => (
-                    <div 
-                      key={m.id}
-                      style={{ 
-                        width: '28px', 
-                        height: '28px', 
-                        borderRadius: '50%', 
-                        background: 'rgba(255,255,255,0.2)',
-                        border: '1.5px solid #7C4DFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        marginLeft: i === 0 ? 0 : '-8px'
-                      }}
-                    >
-                      {(m.profiles?.display_name || m.nickname || '??').substring(0,2).toUpperCase()}
-                    </div>
-                  ))}
-                </div>
-                <span style={{ fontSize: '13px', fontWeight: 600 }}>{tripData.trip_members?.length} thành viên</span>
+              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginBottom: '8px' }}>
+                TỔNG CHI PHÍ · {tripData.name}
+              </div>
+              
+              <div style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, marginBottom: '16px', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                {formatCurrency(totalCost).replace('đ', '')}
+                <span style={{ fontSize: '24px', opacity: 0.8 }}>đ</span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', marginBottom: '24px' }}>
+                <div><span style={{ fontWeight: 700 }}>{formatCurrency(avgPerPerson)}</span><span style={{ opacity: 0.8 }}> / người</span></div>
+                <div><span style={{ fontWeight: 700 }}>{transfers.length}</span><span style={{ opacity: 0.8 }}> lượt chuyển</span></div>
+              </div>
+              
+              <div style={{ display: 'flex', marginLeft: '8px' }}>
+                {tripData.trip_members?.slice(0, 5).map((m: any, i: number) => (
+                  <div 
+                    key={m.id}
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      background: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      backdropFilter: 'blur(4px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      marginLeft: '-10px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {(m.profiles?.display_name || m.nickname || '??').substring(0,2).toUpperCase()}
+                  </div>
+                ))}
+                {tripData.trip_members?.length > 5 && (
+                  <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: 600, alignSelf: 'center', opacity: 0.9 }}>
+                    +{tripData.trip_members.length - 5}
+                  </span>
+                )}
               </div>
             </div>
+          </div>
 
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.8, marginBottom: '4px', letterSpacing: '0.05em' }}>TỔNG CHI PHÍ CHUYẾN ĐI</div>
-              <div style={{ fontSize: '36px', fontWeight: 800, marginBottom: '8px', lineHeight: 1 }}>{formatCurrency(totalCost)}</div>
-              <div className="stats-row" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', fontSize: '12px', opacity: 0.9, marginBottom: '16px' }}>
-                <span><b>{tripData.trip_expenses?.length}</b> khoản chi</span>
-                <span>·</span>
-                <span>TB <b>{formatCurrency(avgPerPerson)}</b>/người</span>
-              </div>
-              <button
-                onClick={() => setAddExpenseOpen(true)}
-                className="btn-add-expense"
-                style={{
-                  background: '#fff',
-                  color: '#7C4DFF',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  marginLeft: 'auto',
-                  cursor: 'pointer'
-                }}
-              >
-                <Icon name="plus" size={16} />
-                <span>Thêm khoản chi</span>
-              </button>
-            </div>
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
+            <button 
+              className="btn btn-primary" 
+              style={{ flex: 1, padding: '14px', fontSize: '15px', borderRadius: '14px', display: 'flex', justifyContent: 'center' }}
+              onClick={() => setAddExpenseOpen(true)}
+            >
+              <Icon name="plus" size={18} />
+              Thêm khoản chi
+            </button>
+            <button 
+              className="btn" 
+              style={{ width: '52px', padding: '0', display: 'grid', placeItems: 'center', borderRadius: '14px', color: 'var(--rose)', background: 'var(--rose-2)', border: 'none' }}
+              onClick={() => setDeleteModalOpen(true)}
+              title="Xóa chuyến đi"
+            >
+              <Icon name="trash" size={18} />
+            </button>
           </div>
 
           {/* Ai chuyển cho ai */}
           <div className="card flush" style={{ marginBottom: '24px' }}>
-            <div className="card-h">
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Icon name="refresh-cw" size={16} style={{ transform: 'rotate(45deg)' }} /> Ai chuyển cho ai
-                </h3>
-                <p className="sub">Tối ưu để số lượt chuyển ít nhất</p>
-              </div>
-              <span className="badge gray">{transfers.length} giao dịch</span>
+            <div className="card-h" style={{ padding: '16px 24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>Ai chuyển cho ai</h3>
+              <span style={{ 
+                background: 'var(--purple-50)', 
+                color: 'var(--purple-600)', 
+                padding: '4px 12px', 
+                borderRadius: '8px', 
+                fontSize: '12px', 
+                fontWeight: 700 
+              }}>
+                {transfers.length} lượt
+              </span>
             </div>
             
             <div className="card-body tight" style={{ padding: 0 }}>
@@ -363,29 +360,34 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
                   key={i} 
                   className="transfer-item"
                   style={{ 
-                    padding: '14px 24px', 
+                    padding: '14px 16px', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'space-between',
-                    borderBottom: i === transfers.length - 1 ? 'none' : '1px solid var(--line-2)'
+                    borderBottom: i === transfers.length - 1 ? 'none' : '1px solid var(--line-2)',
+                    gap: '8px'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                       <div className="avatar sm" style={{ background: 'var(--purple-600)', color: '#fff', width: '26px', height: '24px', fontSize: '10px' }}>{t.from.substring(0,2).toUpperCase()}</div>
-                       <span style={{ fontWeight: 600, fontSize: '14px' }}>{t.from}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexShrink: 1 }}>
+                       <div className="avatar sm" style={{ background: '#7C4DFF', color: '#fff', width: '32px', height: '32px', fontSize: '10px', flexShrink: 0 }}>{t.from.substring(0,2).toUpperCase()}</div>
+                       <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.from}</span>
                     </div>
-                    <Icon name="arrow-right" size={12} style={{ color: 'var(--t3)' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                       <div className="avatar sm" style={{ background: 'var(--purple-600)', color: '#fff', width: '26px', height: '24px', fontSize: '10px' }}>{t.to.substring(0,2).toUpperCase()}</div>
-                       <span style={{ fontWeight: 600, fontSize: '14px' }}>{t.to}</span>
-                       {t.toIsMe && <span className="badge purple" style={{ fontSize: '9px', padding: '1px 5px' }}>BẠN</span>}
+                    
+                    <Icon name="arrow-right" size={14} stroke="#6938E8" style={{ flexShrink: 0 }} />
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexShrink: 1 }}>
+                       <div className="avatar sm" style={{ background: '#7C4DFF', color: '#fff', width: '32px', height: '32px', fontSize: '10px', flexShrink: 0 }}>{t.to.substring(0,2).toUpperCase()}</div>
+                       <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.to}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--purple-700)' }}>{formatCurrency(t.amount)}</span>
-                    <button className="btn btn-secondary btn-sm" style={{ borderRadius: '8px', padding: '6px 16px' }}>
-                      Đánh dấu đã chuyển
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                    <span style={{ fontSize: '16px', fontWeight: 800, color: '#5523C9' }}>{formatCurrency(t.amount)}</span>
+                    <button 
+                      style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      <Icon name="check" size={18} stroke="#1A1A1A" style={{ strokeWidth: 3 }} />
                     </button>
                   </div>
                 </div>
@@ -407,14 +409,14 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
                   <div key={i} className="card" style={{ 
                     padding: '16px', 
                     border: b.balance > 0 ? '1.5px solid var(--green)' : b.balance < -1 ? '1.5px solid var(--rose)' : '1.5px solid var(--line)',
-                    background: b.balance > 0 ? 'var(--green-2)' : b.balance < -1 ? 'var(--rose-2)' : '#fff',
-                    opacity: 0.95,
+                    background: '#fff',
+                    opacity: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                      <div className="avatar sm" style={{ background: 'var(--purple-600)', color: '#fff', width: '28px', height: '28px', fontSize: '11px' }}>{b.name.substring(0,2).toUpperCase()}</div>
+                      <div className="avatar sm" style={{ background: '#7C4DFF', color: '#fff', width: '28px', height: '28px', fontSize: '11px' }}>{b.name.substring(0,2).toUpperCase()}</div>
                       <span style={{ fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
                     </div>
                     <div style={{ 
@@ -443,7 +445,7 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
                 </h3>
                 <p className="sub">Chi tiết các khoản đã thanh toán trong chuyến đi</p>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="hide-mobile" style={{ display: 'flex', gap: '8px' }}>
                 <button className="btn btn-ghost btn-sm">Xuất báo cáo</button>
                 <button className="btn btn-outline btn-sm">Xem tất cả</button>
               </div>
@@ -538,29 +540,8 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
         }
 
         @media (max-width: 768px) {
-          .hero-card {
-            flex-direction: column;
-            gap: 24px;
-            text-align: left;
-            padding: 28px 20px !important;
-          }
-          .hero-card > div:last-child {
-            width: 100%;
-            text-align: left !important;
-            border-top: 1px solid rgba(255,255,255,0.12);
-            padding-top: 24px;
-          }
-          .stats-row {
-            justify-content: flex-start !important;
-            margin-bottom: 20px !important;
-          }
-          .btn-add-expense {
-            margin-left: 0 !important;
-            width: 100%;
-            padding: 12px !important;
-            justify-content: center;
-            font-size: 14px !important;
-            height: 48px;
+          :global(.main-inner) {
+            padding: 16px 12px !important;
           }
           .balances-grid {
             grid-template-columns: 1fr 1fr !important;
@@ -572,14 +553,8 @@ const SplitBillPage: React.FC<SplitBillPageProps> = ({ user }) => {
           .tbl {
             white-space: nowrap;
           }
-          .transfer-item {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 12px;
-          }
-          .transfer-item > div:last-child {
-            width: 100%;
-            justify-content: space-between;
+          .hide-mobile {
+            display: none !important;
           }
         }
       `}</style>

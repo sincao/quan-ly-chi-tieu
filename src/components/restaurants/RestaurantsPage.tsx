@@ -234,9 +234,9 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
              Tìm xem hôm nay nên ăn món gì ở đâu nhen!
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '12px' }}>
           <button 
-            className="btn" 
+            className="btn btn-random" 
             style={{ 
               background: 'linear-gradient(135deg, #7C4DFF 0%, #6938E8 100%)', 
               color: '#fff', 
@@ -529,9 +529,11 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
 
         @media (max-width: 768px) {
           .dash-row.r-1-2 {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 20px !important;
+            display: block !important;
+          }
+          .dash-row.r-1-2 > div {
+            width: 100% !important;
+            margin-bottom: 20px;
           }
           .res-table {
             display: block;
@@ -542,9 +544,23 @@ const RestaurantsPage: React.FC<RestaurantsPageProps> = ({ user }) => {
             max-height: none !important;
           }
           .header-container {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 16px;
+            display: block !important;
+            margin-bottom: 24px !important;
+            padding: 0 !important;
+          }
+          .header-actions {
+            width: 100% !important;
+            margin-top: 20px;
+          }
+          .btn-random {
+            width: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
+            padding: 14px !important;
+            font-size: 16px !important;
+          }
+          :global(.main-inner) {
+            padding: 16px 12px !important;
           }
         }
       `}</style>
